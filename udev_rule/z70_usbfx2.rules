@@ -1,0 +1,9 @@
+# USBFX2 development board udev rules which do the following:
+# * allow access for users in group "plugdev"
+# * unbind the FX2 peripheral from usbtest driver
+# 10-2010 by Vesa Solonen. Tested on plain CY7C68013A on Ubuntu 10.04.
+# Device properties can be found via dmesg (driver and device number) and udevadm info:
+# udevadm info -a -p /sys/bus/usb/drivers/usbtest/1-3\:1.0
+# Reference: http://www.reactivated.net/writing_udev_rules.html
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="04b4", ATTR{idProduct}=="8613", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="04b4", ATTRS{idProduct}=="8613", DRIVER=="usbtest", RUN+="/bin/sh -c 'echo -n %k> %S%p/driver/unbind'"
