@@ -7,7 +7,7 @@ http://www.triplespark.net/elec/periph/USB-FX2/software/fx2pipe.html
 
 Cannelloni either reads from stdin and writes to a Cypress FX chip through USB2.0 (outputting to parallel slave 16 bits bus, MSB first), or does the contrary: read from the chip and write to stdout.
 
-It uploads the firmware to chip RAM at start. It uses the same firmware contained in fx2pipe, with the addition of 1 byte of configuration to allow changing the polarity of some flag output pins. It is compatible with the original firmware.
+It uploads the firmware to chip RAM at start. It uses the same firmware contained in fx2pipe, with the addition of 1 byte of configuration to allow changing the polarity of some flag output pins (they are described in the "arguments migration guide" below). It is compatible with the original firmware.
 
 ## Performance
 
