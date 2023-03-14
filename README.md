@@ -15,7 +15,7 @@ I get 36 MiB/s in/out with my 10-year old Intel i5 PC, using one of those FX2LP 
 
 ## Installation
 
-You will have first to build the firmware. For that, install sdcc first (it could be in your repositories). Then:
+Building the firmware is optional, it is already built in ```firmware/fx2pipe.ihx```. For building it, install sdcc first (it could be in your repositories). Then:
 
 ```
 cd firmware
