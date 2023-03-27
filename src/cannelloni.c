@@ -50,6 +50,7 @@
 
 #include "config.h"
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -396,7 +397,7 @@ int main(int argc, char*argv[])
 
 			case 'n':
 				limitTransfer = 1;
-				if (sscanf(optarg, "%u" , &numBytesLimit) != 1 || numBytesLimit < 2 || numBytesLimit & 1) {
+				if (sscanf(optarg, "%"PRIu64, &numBytesLimit) != 1 || numBytesLimit < 2 || numBytesLimit & 1) {
 					fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
 					return -1;
 				}
@@ -726,7 +727,7 @@ int main(int argc, char*argv[])
 	// Allocate transfer buffer
 	transferBuffer = malloc(blockSize);
 	if (transferBuffer == NULL) {
-		logerror("Not enough system memory to allocate transfer block buffer (%s bytes). Closing.", blockSize);
+		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", blockSize);
 		doTerminate = 1;
 	}
 
@@ -806,7 +807,7 @@ int main(int argc, char*argv[])
 		// MiB/s
 		speed = ( totalBytesTransferred / (1024.0 * 1024.0) ) / deltaTime;
 
-		fprintf(stderr, "Transferred %u bytes in %.2f seconds (%.2f MiB/s)\n", totalBytesTransferred, deltaTime, speed);
+		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n", totalBytesTransferred, deltaTime, speed);
 
 	}
 
