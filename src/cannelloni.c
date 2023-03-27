@@ -246,7 +246,7 @@ void preResetCallback(libusb_device_handle *device)
 	);
 	int result = ezusb_write(device, "Write config", 0xA0, FirmwareConfigAddr, firmwareConfig, ARRAYSIZE(firmwareConfig));
 	if (result<0 && verbose) {
-		logerror("Error writing config in controller.\n", stderr);
+		logerror("Error writing config in controller.\n");
 	}
 }
 
