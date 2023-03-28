@@ -14,49 +14,33 @@
     utils.lib.eachSystem linuxSystems (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        appName = "cannelloni";
       in
       rec {
         packages = rec {
-          firmware = pkgs.stdenv.mkDerivation (
-            let
-              hexFile = "fx2pipe.ihx";
-            in
-            rec {
-              name = "${appName}-firmware";
-              src = ./firmware;
-
-              nativeBuildInputs = with pkgs; [
-                sdcc
-              ];
-
-              buildPhase = ''
-                make CC="sdcc -mmcs51" ${hexFile}
-              '';
-
-              installPhase = ''
-                mkdir -p $out/share/${appName}
-                cp ${hexFile} $out/share/${appName}
-              '';
-            }
-          );
-
           default = pkgs.stdenv.mkDerivation rec {
-            name = appName;
+            name = "cannelloni";
             src = ./.;
+
+            nativeBuildInputs = with pkgs; [
+              autoconf
+              automake
+              pkg-config
+              sdcc
+            ];
 
             buildInputs = with pkgs; [
               libusb1
             ];
 
-            installPhase = ''
-              mkdir -p $out/bin
-              cp ${appName} $out/bin
+            strictDeps = true;
 
+            preConfigure = ''
+              ./autogen.sh
+            '';
+
+            postInstall = ''
               mkdir -p $out/etc/udev
               cp -r udev_rule/ $out/etc/udev/rules.d
-
-              cp -r ${firmware}/share $out
             '';
           };
         };

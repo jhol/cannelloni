@@ -5,6 +5,7 @@
  * Copyright © 2012 Pete Batard (pete@akeo.ie)
  * Copyright © 2013 Federico Manzan (f.manzan@gmail.com)
  * Copyright © 2023 Juan Jose Luna Espinosa (https://github.com/yomboprime)
+ * Copyright © 2023 NVIDIA Corporation (jholdsworth@nvidia.com)
  *
  *    This source code is free software; you can redistribute it
  *    and/or modify it in source code form under the terms of the GNU
@@ -46,10 +47,6 @@
  *
  */
 
-#define CANELLONI_VERSION "cannelloni 0.1.0"
-
-#include "config.h"
-
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,6 +59,8 @@
 #include <time.h>
 
 #include <libusb-1.0/libusb.h>
+
+#include "config.h"
 #include "ezusb.h"
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
@@ -99,8 +98,8 @@ void logerror(const char *format, ...)
 static int print_usage(int error_code) {
 	fputs(
 		"\n"
-		CANELLONI_VERSION " © 2023 by Juan Jose Luna Espinosa. GPL2.0 License.\n"
-		"Documentation and code: https://github.com/yomboprime/cannelloni\n"
+		PACKAGE_STRING " © 2023 by Juan Jose Luna Espinosa. GPL2.0 License.\n"
+		"Documentation and code: " PACKAGE_URL "\n"
 		"\n"
 		"Usage: cannelloni -f <path> [more options]\n"
 		"  -f <path>       -- Firmware to upload (Supported files: .hex, .ihx, .iic, .bix and .img)\n"
@@ -442,7 +441,7 @@ int main(int argc, char*argv[])
 				break;
 
 			case 'V':
-				puts(CANELLONI_VERSION);
+				puts(PACKAGE_STRING);
 				return 0;
 
 			case 'v':

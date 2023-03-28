@@ -15,17 +15,15 @@ I get 36 MiB/s in/out with my 10-year old Intel i5 PC, using one of those FX2LP 
 
 ## Installation
 
-Building the firmware is optional, it is already built in ```firmware/fx2pipe.ihx```. For building it, install sdcc first (it could be in your repositories). Then:
+Depedencies:
+
+  * libusb-1.0
+  * sdcc
+
+To build Cannelloni:
 
 ```
-cd firmware
-make
-cd ..
-```
-
-To build Cannelloni itself (the only requirement is the dev library of libusb-1.0):
-
-```
+./configure
 make
 ```
 
