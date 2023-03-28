@@ -13,7 +13,7 @@ LIBS = -lm -lusb-1.0
 THE_PROGRAM = cannelloni
 
 cannelloni: clean
-	${COMPILER} ${BUILD_TYPE} ${LIBS_DIRS} ${INCLUDE_DIR} ${SRC_FILES} -o ${THE_PROGRAM} ${LIBS} -lstdc++
+	${COMPILER} ${BUILD_TYPE} ${LIBS_DIRS} ${INCLUDE_DIR} ${SRC_FILES} -o ${THE_PROGRAM} ${LIBS}
 
 clean:
 	rm ${THE_PROGRAM} || "true"
