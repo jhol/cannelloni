@@ -488,7 +488,7 @@ int main(int argc, char*argv[])
 	}
 
 	// Determine the configuration (6 bytes) for the microcontroller RAM
-	for ( i = 0; i < ARRAYSIZE( firmwareConfig ); i ++ ) firmwareConfig[ i ] = 0;
+	memset(firmwareConfig, 0, sizeof(firmwareConfig));
 
 	// Byte 0
 	firmwareConfig[ 0 ] = directionIN ? 0x12 : 0x21;
