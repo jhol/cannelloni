@@ -459,11 +459,11 @@ int main(int argc, char*argv[])
 
 		}
 
-	if (path[FIRMWARE] == NULL) {
+	if (!path[FIRMWARE]) {
 		logerror("No firmware specified!\n");
 		return print_usage(-1);
 	}
-	if ((device_id != NULL) && (device_path != NULL)) {
+	if (device_id && device_path) {
 		logerror("Only one of -d or -p can be specified.\n");
 		return print_usage(-1);
 	}
@@ -474,7 +474,7 @@ int main(int argc, char*argv[])
 	}
 
 	// Determine the target type
-	if (type != NULL) {
+	if (type) {
 		for (i=0; i<FX_TYPE_MAX; i++) {
 			if (strcmp(type, fx_name[i]) == 0) {
 				fx_type = i;
@@ -562,7 +562,7 @@ int main(int argc, char*argv[])
 	libusb_set_option(NULL, LIBUSB_OPTION_LOG_LEVEL, verbose);
 
 	// Match parameters to known devices, and open the matched device
-	if ((type == NULL) || (device_id == NULL) || (device_path != NULL)) {
+	if (!type || !device_id || device_path) {
 		if (libusb_get_device_list(NULL, &devs) < 0) {
 			logerror("libusb_get_device_list() failed: %s\n", libusb_error_name(status));
 			goto err;
@@ -570,7 +570,7 @@ int main(int argc, char*argv[])
 		for (i=0; (dev=devs[i]) != NULL; i++) {
 			_busnum = libusb_get_bus_number(dev);
 			_devaddr = libusb_get_device_address(dev);
-			if ((type != NULL) && (device_path != NULL)) {
+			if (type && device_path) {
 				// If both a type and bus,addr were specified, we just need to find our match
 				if ((libusb_get_bus_number(dev) == busnum) && (libusb_get_device_address(dev) == devaddr))
 					break;
@@ -585,13 +585,13 @@ int main(int argc, char*argv[])
 						if ((desc.idVendor == known_device[j].vid)
 							&& (desc.idProduct == known_device[j].pid)) {
 							if (// Nothing was specified
-								((type == NULL) && (device_id == NULL) && (device_path == NULL)) ||
+								(!type && !device_id && !device_path) ||
 								// vid:pid was specified and we have a match
-								((type == NULL) && (device_id != NULL) && (vid == desc.idVendor) && (pid == desc.idProduct)) ||
+								(!type && device_id && (vid == desc.idVendor) && (pid == desc.idProduct)) ||
 								// bus,addr was specified and we have a match
-								((type == NULL) && (device_path != NULL) && (busnum == _busnum) && (devaddr == _devaddr)) ||
+								(!type && device_path && (busnum == _busnum) && (devaddr == _devaddr)) ||
 								// type was specified and we have a match
-								((type != NULL) && (device_id == NULL) && (device_path == NULL) && (fx_type == known_device[j].type)) ) {
+								(type && !device_id && !device_path && (fx_type == known_device[j].type)) ) {
 								fx_type = known_device[j].type;
 							vid = desc.idVendor;
 							pid = desc.idProduct;
@@ -610,7 +610,7 @@ int main(int argc, char*argv[])
 				}
 			}
 		}
-		if (dev == NULL) {
+		if (!dev) {
 			libusb_free_device_list(devs, 1);
 			libusb_exit(NULL);
 			logerror("Could not find a known device - please specify type and/or vid:pid and/or bus,dev\n");
@@ -622,9 +622,9 @@ int main(int argc, char*argv[])
 			logerror("libusb_open() failed: %s\n", libusb_error_name(status));
 			goto err;
 		}
-	} else if (device_id != NULL) {
+	} else if (device_id) {
 		device = libusb_open_device_with_vid_pid(NULL, (uint16_t)vid, (uint16_t)pid);
-		if (device == NULL) {
+		if (!device) {
 			logerror("libusb_open() failed\n");
 			goto err;
 		}
@@ -646,7 +646,7 @@ int main(int argc, char*argv[])
 
 	// Load the firmware image in memory
 	for (i=0; i<ARRAYSIZE(path); i++) {
-		if (path[i] != NULL) {
+		if (path[i]) {
 			ext = path[i] + strlen(path[i]) - 4;
 			if ((_stricmp(ext, ".hex") == 0) || (strcmp(ext, ".ihx") == 0))
 				img_type[i] = IMG_TYPE_HEX;
@@ -668,7 +668,7 @@ int main(int argc, char*argv[])
 	}
 
 	// Program the firmware in the microcontroller
-	if (path[LOADER] == NULL) {
+	if (!path[LOADER]) {
 		// Single stage, put into internal memory
 		if (verbose > 1)
 			logerror("single stage: load on-chip memory\n");
@@ -700,7 +700,7 @@ int main(int argc, char*argv[])
 		}
 	} else {
 		device = libusb_open_device_with_vid_pid(NULL, (uint16_t)vid, (uint16_t)pid);
-		if (device == NULL) {
+		if (!device) {
 			logerror("libusb_open() failed for data transfer.\n");
 			goto err;
 		}
@@ -727,7 +727,7 @@ int main(int argc, char*argv[])
 
 	// Allocate transfer buffer
 	transferBuffer = malloc(blockSize);
-	if (transferBuffer == NULL) {
+	if (!transferBuffer) {
 		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", blockSize);
 		doTerminate = 1;
 	}
