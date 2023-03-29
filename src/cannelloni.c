@@ -158,13 +158,13 @@ static void signalHandler(int)
 	}
 }
 
-double getTime() {
+static double getTime() {
 	struct timespec t;
 	clock_gettime( CLOCK_MONOTONIC, &t );
 	return ( (double) t.tv_sec ) + ( ( double ) t.tv_nsec ) * 0.000000001;
 }
 
-char parseOptionC(char *value, char *useIFCLK, char *use48MhzInternalCLK, char *redirectToCLKOUT, char *invertIFCLK)
+static char parseOptionC(char *value, char *useIFCLK, char *use48MhzInternalCLK, char *redirectToCLKOUT, char *invertIFCLK)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
@@ -201,7 +201,7 @@ char parseOptionC(char *value, char *useIFCLK, char *use48MhzInternalCLK, char *
 #define MHZ12 0
 #define MHZ24 1
 #define MHZ48 2
-char parseOptionZ(char *value, int *cpuMHz, char *enableCLKOUTDriver, char *invertCLKOUT)
+static char parseOptionZ(char *value, int *cpuMHz, char *enableCLKOUTDriver, char *invertCLKOUT)
 {
 	int pos = 0;
 
@@ -236,7 +236,7 @@ char parseOptionZ(char *value, int *cpuMHz, char *enableCLKOUTDriver, char *inve
 	return 0;
 }
 
-void preResetCallback(libusb_device_handle *device)
+static void preResetCallback(libusb_device_handle *device)
 {
 	if (verbose) logerror("Firmware configuration: %d, %d, %d, %d, %d, %d\n",
 		firmwareConfig[ 0 ],
