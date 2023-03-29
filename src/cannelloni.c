@@ -76,7 +76,7 @@ static bool dosyslog = false;
 
 // The 6 bytes of config which are written to the
 // controller RAM after uploading the firmware.
-uint8_t firmwareConfig[ 6 ];
+uint8_t firmware_config[ 6 ];
 
 // Controller RAM address to write the config to.
 const int FirmwareConfigAddr = 0x1003;
@@ -144,50 +144,50 @@ static int print_usage(int error_code) {
 	return error_code;
 }
 
-char doTerminate = 0;
-int numSignals = 0;
-static void signalHandler(int)
+char do_terminate = 0;
+int num_signals = 0;
+static void signal_handler(int)
 {
-	if ( ++numSignals >= 5 ) {
+	if ( ++num_signals >= 5 ) {
 		fprintf(stderr, "\nReceived too many signals, forcibly stopping...\n");
 		exit(-1);
 	}
 	else {
 		if (verbose) fprintf(stderr, "\nSignal received, stopping after the current transfer...\n");
-		doTerminate = 1;
+		do_terminate = 1;
 	}
 }
 
-static double getTime() {
+static double get_time() {
 	struct timespec t;
 	clock_gettime( CLOCK_MONOTONIC, &t );
 	return ( (double) t.tv_sec ) + ( ( double ) t.tv_nsec ) * 0.000000001;
 }
 
-static char parseOptionC(char *value, char *useIFCLK, char *use48MhzInternalCLK, char *redirectToCLKOUT, char *invertIFCLK)
+static char parse_option_c(char *value, char *use_ifclk, char *use_48mhz_internal_clk, char *redirect_to_clkout, char *invert_ifclkg)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
-		*useIFCLK = 1;
+		*use_ifclk = 1;
 		pos++;
 	} else if (value[pos] == '3' && value[pos + 1] == '0') {
-		*use48MhzInternalCLK = 0;
+		*use_48mhz_internal_clk = 0;
 		pos+= 2;
 		if (value[pos] == 'o') {
-			*redirectToCLKOUT = 1;
+			*redirect_to_clkout = 1;
 			pos++;
 		}
 	} else if (value[pos] == '4' && value[pos + 1] == '8') {
-		*use48MhzInternalCLK = 1;
+		*use_48mhz_internal_clk = 1;
 		pos+= 2;
 		if (value[pos] == 'o') {
-			*redirectToCLKOUT = 1;
+			*redirect_to_clkout = 1;
 			pos++;
 		}
 	}
 
 	if (value[pos] == 'i') {
-		*invertIFCLK = 1;
+		*invert_ifclkg = 1;
 		pos++;
 	}
 
@@ -201,31 +201,31 @@ static char parseOptionC(char *value, char *useIFCLK, char *use48MhzInternalCLK,
 #define MHZ12 0
 #define MHZ24 1
 #define MHZ48 2
-static char parseOptionZ(char *value, int *cpuMHz, char *enableCLKOUTDriver, char *invertCLKOUT)
+static char parse_option_z(char *value, int *cpu_mhz, char *enable_clkout_driver, char *inver_clkout)
 {
 	int pos = 0;
 
 	if (value[pos] == '1' && value[pos + 1] == '2') {
-		*cpuMHz = MHZ12;
+		*cpu_mhz = MHZ12;
 		pos += 2;
 	} else if (value[pos] == '2' && value[pos + 1] == '4') {
-		*cpuMHz = MHZ24;
+		*cpu_mhz = MHZ24;
 		pos += 2;
 	} else if (value[pos] == '4' && value[pos + 1] == '8') {
-		*cpuMHz = MHZ48;
+		*cpu_mhz = MHZ48;
 		pos += 2;
 	}
 
 	if (value[pos] == 'o') {
-		*enableCLKOUTDriver = 1;
+		*enable_clkout_driver = 1;
 		pos++;
 	} else if (value[pos] == 'z') {
-		*enableCLKOUTDriver = 0;
+		*enable_clkout_driver = 0;
 		pos++;
 	}
 
 	if (value[pos] == 'i') {
-		*invertCLKOUT = 1;
+		*inver_clkout = 1;
 		pos++;
 	}
 
@@ -236,17 +236,17 @@ static char parseOptionZ(char *value, int *cpuMHz, char *enableCLKOUTDriver, cha
 	return 0;
 }
 
-static void preResetCallback(libusb_device_handle *device)
+static void pre_reset_callback(libusb_device_handle *device)
 {
 	if (verbose) logerror("Firmware configuration: %d, %d, %d, %d, %d, %d\n",
-		firmwareConfig[ 0 ],
-		firmwareConfig[ 1 ],
-		firmwareConfig[ 2 ],
-		firmwareConfig[ 3 ],
-		firmwareConfig[ 4 ],
-		firmwareConfig[ 5 ]
+		firmware_config[ 0 ],
+		firmware_config[ 1 ],
+		firmware_config[ 2 ],
+		firmware_config[ 3 ],
+		firmware_config[ 4 ],
+		firmware_config[ 5 ]
 	);
-	int result = ezusb_write(device, "Write config", 0xA0, FirmwareConfigAddr, firmwareConfig, ARRAYSIZE(firmwareConfig));
+	int result = ezusb_write(device, "Write config", 0xA0, FirmwareConfigAddr, firmware_config, ARRAYSIZE(firmware_config));
 	if (result<0 && verbose) {
 		logerror("Error writing config in controller.\n");
 	}
@@ -273,46 +273,46 @@ int main(int argc, char*argv[])
 	libusb_device_handle *device = NULL;
 	struct libusb_device_descriptor desc;
 
-	int alternateFunction;
-	char directionIN = 1;
-	char disableInOut = 0;
-	char use8BitBus = 0;
-	int numBuffers = 4;
-	char runAsyncBus = 0;
+	int alternate_function;
+	char direction_in = 1;
+	char disable_in_out = 0;
+	char use_8bit_bus = 0;
+	int num_buffers = 4;
+	char run_async_bus = 0;
 
-	int blockSize = 16384;
+	int block_size = 16384;
 	unsigned int bSize = 0;
-	unsigned char *transferBuffer;
-	char limitTransfer = 0;
-	uint64_t numBytesLimit = 0;
-	uint64_t numBytesToTransfer = 0;
-	uint64_t totalBytesLeftToTransfer = 0;
-	uint64_t totalBytesTransferred = 0;
-	int numBytesTransferred;
+	unsigned char *transfer_buffer;
+	char limit_transfer = 0;
+	uint64_t num_bytes_limit = 0;
+	uint64_t num_bytes_to_transfer = 0;
+	uint64_t total_bytes_left_to_transfer = 0;
+	uint64_t total_bytes_transferred = 0;
+	int num_bytes_transferred;
 
-	char useIFCLK = 0;
-	char use48MhzInternalCLK = 1;
-	char redirectToCLKOUT = 0;
-	char invertIFCLK = 0;
+	char use_ifclk = 0;
+	char use_48mhz_internal_clk = 1;
+	char redirect_to_clkout = 0;
+	char invert_ifclkg = 0;
 
-	int cpuMHz = MHZ48;
-	char enableCLKOUTDriver = 0;
-	char invertCLKOUT = 0;
+	int cpu_mhz = MHZ48;
+	char enable_clkout_driver = 0;
+	char inver_clkout = 0;
 
-	char invertQueueFullPin = 0;
-	char invertQueueEmptyPin = 0;
-	char invertQueueSLWRPin = 0;
-	char invertQueueSLRDPin = 0;
-	char invertQueueSLOEPin = 0;
-	char invertQueuePKTENDPin = 0;
+	char invert_queue_full_pin = 0;
+	char invert_queue_empty_pin = 0;
+	char invert_queue_slwr_pin = 0;
+	char invert_queue_slrd_pin = 0;
+	char invert_queue_sloe_pin = 0;
+	char invert_queue_pktend_pin = 0;
 
 	unsigned char endpoint;
 
-	double time0, time1, deltaTime, speed;
+	double time0, time1, delta_time, speed;
 
 	// Install signal handlers
-	signal( SIGTERM, signalHandler );
-	signal( SIGINT, signalHandler );
+	signal( SIGTERM, signal_handler );
+	signal( SIGINT, signal_handler );
 
 	// Parse arguments
 
@@ -349,43 +349,43 @@ int main(int argc, char*argv[])
 				break;
 
 			case 'i':
-				directionIN = 1;
+				direction_in = 1;
 				break;
 
 			case 'o':
-				directionIN = 0;
+				direction_in = 0;
 				break;
 
 			case '0':
-				disableInOut = 1;
+				disable_in_out = 1;
 				break;
 
 			case 'w':
-				use8BitBus = 0;
+				use_8bit_bus = 0;
 				break;
 
 			case '8':
-				use8BitBus = 1;
+				use_8bit_bus = 1;
 				break;
 
 			case '4':
-				numBuffers = 4;
+				num_buffers = 4;
 				break;
 
 			case '3':
-				numBuffers = 3;
+				num_buffers = 3;
 				break;
 
 			case '2':
-				numBuffers = 2;
+				num_buffers = 2;
 				break;
 
 			case 'a':
-				runAsyncBus = 1;
+				run_async_bus = 1;
 				break;
 
 			case 's':
-				runAsyncBus = 0;
+				run_async_bus = 0;
 				break;
 
 			case 'b':
@@ -393,51 +393,51 @@ int main(int argc, char*argv[])
 					fputs ("-b: Please specify a positive, even buffer size in bytes in decimal format.", stderr);
 					return -1;
 				}
-				blockSize = bSize;
+				block_size = bSize;
 				break;
 
 			case 'n':
-				limitTransfer = 1;
-				if (sscanf(optarg, "%"PRIu64, &numBytesLimit) != 1 || numBytesLimit < 2 || numBytesLimit & 1) {
+				limit_transfer = 1;
+				if (sscanf(optarg, "%"PRIu64, &num_bytes_limit) != 1 || num_bytes_limit < 2 || num_bytes_limit & 1) {
 					fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
 					return -1;
 				}
 				break;
 
 			case 'c':
-				if (parseOptionC( optarg, &useIFCLK, &use48MhzInternalCLK, &redirectToCLKOUT, &invertIFCLK)) {
+				if (parse_option_c( optarg, &use_ifclk, &use_48mhz_internal_clk, &redirect_to_clkout, &invert_ifclkg)) {
 					return print_usage(-1);
 				}
 				break;
 
 			case 'z':
-				if (parseOptionZ( optarg, &cpuMHz, &enableCLKOUTDriver, &invertCLKOUT)) {
+				if (parse_option_z( optarg, &cpu_mhz, &enable_clkout_driver, &inver_clkout)) {
 					return print_usage(-1);
 				}
 				break;
 
 			case 'e':
-				invertQueueEmptyPin = 1;
+				invert_queue_empty_pin = 1;
 				break;
 
 			case 'l':
-				invertQueueFullPin = 1;
+				invert_queue_full_pin = 1;
 				break;
 
 			case 'x':
-				invertQueueSLWRPin = 1;
+				invert_queue_slwr_pin = 1;
 				break;
 
 			case 'r':
-				invertQueueSLRDPin = 1;
+				invert_queue_slrd_pin = 1;
 				break;
 
 			case 'j':
-				invertQueueSLOEPin = 1;
+				invert_queue_sloe_pin = 1;
 				break;
 
 			case 'k':
-				invertQueuePKTENDPin = 1;
+				invert_queue_pktend_pin = 1;
 				break;
 
 			case 'V':
@@ -468,7 +468,7 @@ int main(int argc, char*argv[])
 		return print_usage(-1);
 	}
 
-	if ( numBytesLimit % blockSize != 0 ) {
+	if ( num_bytes_limit % block_size != 0 ) {
 		logerror("Number of bytes to transfer must be divisible by buffer size.\n");
 		return print_usage(-1);
 	}
@@ -488,68 +488,68 @@ int main(int argc, char*argv[])
 	}
 
 	// Determine the configuration (6 bytes) for the microcontroller RAM
-	memset(firmwareConfig, 0, sizeof(firmwareConfig));
+	memset(firmware_config, 0, sizeof(firmware_config));
 
 	// Byte 0
-	firmwareConfig[ 0 ] = directionIN ? 0x12 : 0x21;
+	firmware_config[ 0 ] = direction_in ? 0x12 : 0x21;
 
 	// Byte 1
-	if (!useIFCLK) firmwareConfig[ 1 ] |= 1 << 7;
-	if (use48MhzInternalCLK) firmwareConfig[ 1 ] |= 1 << 6;
-	if (redirectToCLKOUT) firmwareConfig[ 1 ] |= 1 << 5;
-	if (invertIFCLK) firmwareConfig[ 1 ] |= 1 << 4;
-	if (runAsyncBus) firmwareConfig[ 1 ] |= 1 << 3;
+	if (!use_ifclk) firmware_config[ 1 ] |= 1 << 7;
+	if (use_48mhz_internal_clk) firmware_config[ 1 ] |= 1 << 6;
+	if (redirect_to_clkout) firmware_config[ 1 ] |= 1 << 5;
+	if (invert_ifclkg) firmware_config[ 1 ] |= 1 << 4;
+	if (run_async_bus) firmware_config[ 1 ] |= 1 << 3;
 	// Slave FIFO
-	firmwareConfig[ 1 ] |= 0x03;
+	firmware_config[ 1 ] |= 0x03;
 
 	// Byte 2
-	firmwareConfig[ 2 ] = 1 << 7;
-	if (directionIN) firmwareConfig[ 2 ] |= 1 << 6;
+	firmware_config[ 2 ] = 1 << 7;
+	if (direction_in) firmware_config[ 2 ] |= 1 << 6;
 	// Bulk, 512 bytes
-	firmwareConfig[ 2 ] |= 0x20;
-	switch (numBuffers) {
+	firmware_config[ 2 ] |= 0x20;
+	switch (num_buffers) {
 		case 2:
-			firmwareConfig[ 2 ] |= 0x02;
+			firmware_config[ 2 ] |= 0x02;
 			break;
 		case 3:
-			firmwareConfig[ 2 ] |= 0x03;
+			firmware_config[ 2 ] |= 0x03;
 			break;
 		case 4:
 		default:
-			// Nothing to do: firmwareConfig[ 2 ] |= 0x00;
+			// Nothing to do: firmware_config[ 2 ] |= 0x00;
 			break;
 	}
 
 	// Byte 3
-	firmwareConfig[ 3 ] = directionIN ? 0x0d : 0x11;
-	if ( use8BitBus ) firmwareConfig[ 3 ] &= 0xFE;
+	firmware_config[ 3 ] = direction_in ? 0x0d : 0x11;
+	if ( use_8bit_bus ) firmware_config[ 3 ] &= 0xFE;
 
 	// Byte 4
-	switch (cpuMHz) {
+	switch (cpu_mhz) {
 		case MHZ12:
-			// Nothing to do: firmwareConfig[ 4 ] |= 0x00;
+			// Nothing to do: firmware_config[ 4 ] |= 0x00;
 			break;
 		case MHZ24:
-			firmwareConfig[ 4 ] |= 0x08;
+			firmware_config[ 4 ] |= 0x08;
 			break;
 		case MHZ48:
 		default:
-			firmwareConfig[ 4 ] |= 0x10;
+			firmware_config[ 4 ] |= 0x10;
 			break;
 	}
-	if (invertCLKOUT) firmwareConfig[ 4 ] |= 1 << 2;
-	if (enableCLKOUTDriver) firmwareConfig[ 4 ] |= 1 << 1;
+	if (inver_clkout) firmware_config[ 4 ] |= 1 << 2;
+	if (enable_clkout_driver) firmware_config[ 4 ] |= 1 << 1;
 
 	// Byte 5
-	if (invertQueueFullPin) firmwareConfig[ 5 ] |= 1 << 0;
-	if (invertQueueEmptyPin) firmwareConfig[ 5 ] |= 1 << 1;
-	if (invertQueueSLWRPin) firmwareConfig[ 5 ] |= 1 << 2;
-	if (invertQueueSLRDPin) firmwareConfig[ 5 ] |= 1 << 3;
-	if (invertQueueSLOEPin) firmwareConfig[ 5 ] |= 1 << 4;
-	if (invertQueuePKTENDPin) firmwareConfig[ 5 ] |= 1 << 5;
+	if (invert_queue_full_pin) firmware_config[ 5 ] |= 1 << 0;
+	if (invert_queue_empty_pin) firmware_config[ 5 ] |= 1 << 1;
+	if (invert_queue_slwr_pin) firmware_config[ 5 ] |= 1 << 2;
+	if (invert_queue_slrd_pin) firmware_config[ 5 ] |= 1 << 3;
+	if (invert_queue_sloe_pin) firmware_config[ 5 ] |= 1 << 4;
+	if (invert_queue_pktend_pin) firmware_config[ 5 ] |= 1 << 5;
 
 
-	if ( doTerminate ) exit(-1);
+	if ( do_terminate ) exit(-1);
 
 	// -- Finished configuration preparation. Start accessing the device with libusb
 
@@ -672,12 +672,12 @@ int main(int argc, char*argv[])
 		// Single stage, put into internal memory
 		if (verbose > 1)
 			logerror("single stage: load on-chip memory\n");
-		status = ezusb_load_ram(device, path[FIRMWARE], fx_type, img_type[FIRMWARE], 0, preResetCallback);
+		status = ezusb_load_ram(device, path[FIRMWARE], fx_type, img_type[FIRMWARE], 0, pre_reset_callback);
 	} else {
 		// two-stage, put loader into external memory
 		if (verbose > 1)
 			logerror("1st stage: load 2nd stage loader\n");
-		status = ezusb_load_ram(device, path[LOADER], fx_type, img_type[LOADER], 0, preResetCallback);
+		status = ezusb_load_ram(device, path[LOADER], fx_type, img_type[LOADER], 0, pre_reset_callback);
 		if (status == 0) {
 			// two-stage, put firmware into internal memory
 			if (verbose > 1)
@@ -716,8 +716,8 @@ int main(int argc, char*argv[])
 
 	// Set interface 0 alternate function corresponding to transfer type
 	// TODO: Currently only transfer type 1 supported (bulk)
-	alternateFunction = 1;
-	status = libusb_set_interface_alt_setting(device, 0, alternateFunction);
+	alternate_function = 1;
+	status = libusb_set_interface_alt_setting(device, 0, alternate_function);
 	if (status != LIBUSB_SUCCESS) {
 		libusb_release_interface(device, 0);
 		libusb_close(device);
@@ -726,69 +726,69 @@ int main(int argc, char*argv[])
 	}
 
 	// Allocate transfer buffer
-	transferBuffer = malloc(blockSize);
-	if (!transferBuffer) {
-		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", blockSize);
-		doTerminate = 1;
+	transfer_buffer = malloc(block_size);
+	if (!transfer_buffer) {
+		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", block_size);
+		do_terminate = 1;
 	}
 
 	// Select endpoint
-	endpoint = directionIN ? 0x86 : 0x02;
+	endpoint = direction_in ? 0x86 : 0x02;
 
-	if (limitTransfer) totalBytesLeftToTransfer = numBytesLimit;
+	if (limit_transfer) total_bytes_left_to_transfer = num_bytes_limit;
 
-	time0 = getTime();
+	time0 = get_time();
 
 	// Data transfer loop
-	while (!doTerminate) {
+	while (!do_terminate) {
 
-		numBytesToTransfer = blockSize;
-		if (limitTransfer && numBytesToTransfer >= totalBytesLeftToTransfer ) {
-			numBytesToTransfer = totalBytesLeftToTransfer;
-			doTerminate = 1;
+		num_bytes_to_transfer = block_size;
+		if (limit_transfer && num_bytes_to_transfer >= total_bytes_left_to_transfer ) {
+			num_bytes_to_transfer = total_bytes_left_to_transfer;
+			do_terminate = 1;
 		}
 
-		if (!directionIN) {
-			if (!disableInOut) {
+		if (!direction_in) {
+			if (!disable_in_out) {
 				// Read from stdin
-				if (fread(transferBuffer, numBytesToTransfer, 1, stdin) != 1 ) {
+				if (fread(transfer_buffer, num_bytes_to_transfer, 1, stdin) != 1 ) {
 					logerror("Error reading data from stdin. Stopping.");
-					doTerminate = 1;
+					do_terminate = 1;
 					break;
 				}
-				if (doTerminate) break;
-			} else memset(transferBuffer, 0, numBytesToTransfer);
+				if (do_terminate) break;
+			} else memset(transfer_buffer, 0, num_bytes_to_transfer);
 		}
 
 		// Do the actual data transfer
-		status = libusb_bulk_transfer(device, endpoint, transferBuffer, numBytesToTransfer, &numBytesTransferred, 1000);
+		status = libusb_bulk_transfer(device, endpoint, transfer_buffer, num_bytes_to_transfer, &num_bytes_transferred, 1000);
 		if (status) {
 			logerror("Data transfer failed: %s\n", libusb_error_name(status));
-			doTerminate = 1;
+			do_terminate = 1;
 			break;
 		}
 
-		totalBytesLeftToTransfer -= numBytesTransferred;
-		totalBytesTransferred += numBytesTransferred;
+		total_bytes_left_to_transfer -= num_bytes_transferred;
+		total_bytes_transferred += num_bytes_transferred;
 
-		if (directionIN && !disableInOut)
+		if (direction_in && !disable_in_out)
 			// Write to stdout
-			if (fwrite(transferBuffer, numBytesTransferred, 1, stdout) != 1 ) {
+			if (fwrite(transfer_buffer, num_bytes_transferred, 1, stdout) != 1 ) {
 				logerror("Error writing to stdout. Stopping.");
-				doTerminate = 1;
+				do_terminate = 1;
 				break;
 			}
 
-		if (numBytesTransferred < numBytesToTransfer) {
+		if (num_bytes_transferred < num_bytes_to_transfer) {
 			logerror("Input data received for transfer was less than expected.");
 		}
 
 	}
 
-	time1 = getTime();
+	time1 = get_time();
 
 	// Free transfer buffer
-	free(transferBuffer);
+	free(transfer_buffer);
 
 	// Release interface
 	libusb_release_interface(device, 0);
@@ -804,11 +804,11 @@ int main(int argc, char*argv[])
 	if (verbose) {
 
 		// Seconds
-		deltaTime = time1 - time0;
+		delta_time = time1 - time0;
 		// MiB/s
-		speed = ( totalBytesTransferred / (1024.0 * 1024.0) ) / deltaTime;
+		speed = ( total_bytes_transferred / (1024.0 * 1024.0) ) / delta_time;
 
-		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n", totalBytesTransferred, deltaTime, speed);
+		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n", total_bytes_transferred, delta_time, speed);
 
 	}
 
