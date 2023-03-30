@@ -97,49 +97,51 @@ void logerror(const char *format, ...)
 }
 
 static int print_usage(int error_code) {
-
-	fprintf(stderr, "\n%s", CANELLONI_VERSION);
-	fprintf(stderr, " © 2023 by Juan Jose Luna Espinosa. GPL2.0 License.\n");
-	fprintf(stderr, "Documentation and code: https://github.com/yomboprime/cannelloni\n");
-	fprintf(stderr, "\nUsage: cannelloni -f <path> [more options]\n");
-	fprintf(stderr, "  -f <path>       -- Firmware to upload (Supported files: .hex, .ihx, .iic, .bix and .img)\n");
-	fprintf(stderr, "  -g <path>       -- Second stage loader firmware file (same supported extensions as -f)\n");
-	fprintf(stderr, "  -t <type>       -- Target type: an21, fx, fx2, fx2lp, fx3. Note: fx3 is not implemented.\n");
-	fprintf(stderr, "  -d <vid:pid>    -- Target device, as an USB VID:PID\n");
-	fprintf(stderr, "  -p <bus,addr>   -- Target device, as a libusb bus number and device address path.\n");
-	fprintf(stderr, "  Note: if -t, -d nor -p are specified, the first supported found device will be used.\n");
-	fprintf(stderr, "  -i              -- Run in IN direction, i.e. USB->Host (read data from USB EP6)(default)\n");
-	fprintf(stderr, "  -o              -- Run in OUT direction, i.e. Host->USB (write data to USB EP2)\n");
-	fprintf(stderr, "  -0              -- No stdin/stdout, discard incoming data/send zeros (For testing speed)\n");
-	fprintf(stderr, "  -w              -- Use 16bit (default) wide fifo bus on FX2 side.\n");
-	fprintf(stderr, "  -8              -- Use 8bit wide fifo bus on FX2 side.\n");
-	fprintf(stderr, "  -4              -- Use quadruple buffered (default) FX2 fifo.\n");
-	fprintf(stderr, "  -3              -- Use triple buffered FX2 fifo.\n");
-	fprintf(stderr, "  -2              -- Use double buffered FX2 fifo.\n");
-	fprintf(stderr, "  -s              -- Run in sync slave fifo mode (default)\n");
-	fprintf(stderr, "  -a              -- Run in async slave fifo mode.\n");
-	fprintf(stderr, "  -b N            -- Set IO buffer size to N bytes (default 16384), even from 2 to 2^31 -2.\n");
-	fprintf(stderr, "  -n M            -- Stop after M bytes, M being a number from 2 to 2^64 - 1.\n");
-	fprintf(stderr, "  Note: M, if specified, must be divisible by N to avoid potential buffer overflow errors.\n");
-	fprintf(stderr, "  -c [x|30[o]|48[o]][i] -- Specify interface clock:\n");
-	fprintf(stderr, "                        x -> External from IFCLK pin.\n");
-	fprintf(stderr, "                        30 or 48 -> Internal clock 30/48MHz (default: 48).\n");
-	fprintf(stderr, "                        Suffix 'o' to enable redirection of clock to CLKOUT pin.\n");
-	fprintf(stderr, "                        'i' to invert IFCLK.\n");
-	fprintf(stderr, "  -z [12|24|48][o|z][i] -- Specify 8051 frequency in MHz (default: 48) and CLKOUT pin:\n");
-	fprintf(stderr, "                        o -> Enable CLKOUT pin driver output.\n");
-	fprintf(stderr, "                        z -> Disable (tristate) CLKOUT pin driver output (default)\n");
-	fprintf(stderr, "                        i -> Invert clock signal on CLKOUT pin.\n");
-	fprintf(stderr, "  -l              -- Invert polarity of 'queue full' flag output pin (i.e., assert high)\n");
-	fprintf(stderr, "  -e              -- Invert polarity of 'queue empty' flag output pin (i.e., assert high)\n");
-	fprintf(stderr, "  -x              -- Invert polarity of 'SLWR' input pin (i.e., assert high)\n");
-	fprintf(stderr, "  -r              -- Invert polarity of 'SLRD' input pin (i.e., assert high)\n");
-	fprintf(stderr, "  -j              -- Invert polarity of 'SLOE' input pin (i.e., assert high)\n");
-	fprintf(stderr, "  -k              -- Invert polarity of 'PKTEND' input flag pin (i.e., assert high)\n");
-	fprintf(stderr, "  -v              -- Increase verbosity.\n");
-	fprintf(stderr, "  -q              -- Decrease verbosity (silent mode)\n");
-	fprintf(stderr, "  -V              -- Print program version.\n");
-	fprintf(stderr, "  -h              -- Print this help.\n");
+	fputs(
+		"\n"
+		CANELLONI_VERSION " © 2023 by Juan Jose Luna Espinosa. GPL2.0 License.\n"
+		"Documentation and code: https://github.com/yomboprime/cannelloni\n"
+		"\n"
+		"Usage: cannelloni -f <path> [more options]\n"
+		"  -f <path>       -- Firmware to upload (Supported files: .hex, .ihx, .iic, .bix and .img)\n"
+		"  -g <path>       -- Second stage loader firmware file (same supported extensions as -f)\n"
+		"  -t <type>       -- Target type: an21, fx, fx2, fx2lp, fx3. Note: fx3 is not implemented.\n"
+		"  -d <vid:pid>    -- Target device, as an USB VID:PID\n"
+		"  -p <bus,addr>   -- Target device, as a libusb bus number and device address path.\n"
+		"  Note: if -t, -d nor -p are specified, the first supported found device will be used.\n"
+		"  -i              -- Run in IN direction, i.e. USB->Host (read data from USB EP6)(default)\n"
+		"  -o              -- Run in OUT direction, i.e. Host->USB (write data to USB EP2)\n"
+		"  -0              -- No stdin/stdout, discard incoming data/send zeros (For testing speed)\n"
+		"  -w              -- Use 16bit (default) wide fifo bus on FX2 side.\n"
+		"  -8              -- Use 8bit wide fifo bus on FX2 side.\n"
+		"  -4              -- Use quadruple buffered (default) FX2 fifo.\n"
+		"  -3              -- Use triple buffered FX2 fifo.\n"
+		"  -2              -- Use double buffered FX2 fifo.\n"
+		"  -s              -- Run in sync slave fifo mode (default)\n"
+		"  -a              -- Run in async slave fifo mode.\n"
+		"  -b N            -- Set IO buffer size to N bytes (default 16384), even from 2 to 2^31 -2.\n"
+		"  -n M            -- Stop after M bytes, M being a number from 2 to 2^64 - 1.\n"
+		"  Note: M, if specified, must be divisible by N to avoid potential buffer overflow errors.\n"
+		"  -c [x|30[o]|48[o]][i] -- Specify interface clock:\n"
+		"                        x -> External from IFCLK pin.\n"
+		"                        30 or 48 -> Internal clock 30/48MHz (default: 48).\n"
+		"                        Suffix 'o' to enable redirection of clock to CLKOUT pin.\n"
+		"                        'i' to invert IFCLK.\n"
+		"  -z [12|24|48][o|z][i] -- Specify 8051 frequency in MHz (default: 48) and CLKOUT pin:\n"
+		"                        o -> Enable CLKOUT pin driver output.\n"
+		"                        z -> Disable (tristate) CLKOUT pin driver output (default)\n"
+		"                        i -> Invert clock signal on CLKOUT pin.\n"
+		"  -l              -- Invert polarity of 'queue full' flag output pin (i.e., assert high)\n"
+		"  -e              -- Invert polarity of 'queue empty' flag output pin (i.e., assert high)\n"
+		"  -x              -- Invert polarity of 'SLWR' input pin (i.e., assert high)\n"
+		"  -r              -- Invert polarity of 'SLRD' input pin (i.e., assert high)\n"
+		"  -j              -- Invert polarity of 'SLOE' input pin (i.e., assert high)\n"
+		"  -k              -- Invert polarity of 'PKTEND' input flag pin (i.e., assert high)\n"
+		"  -v              -- Increase verbosity.\n"
+		"  -q              -- Decrease verbosity (silent mode)\n"
+		"  -V              -- Print program version.\n"
+		"  -h              -- Print this help.\n",
+		stderr);
 	return error_code;
 }
 
