@@ -141,7 +141,7 @@ static int print_usage(int error_code) {
 		"  -q              -- Decrease verbosity (silent mode)\n"
 		"  -V              -- Print program version.\n"
 		"  -h              -- Print this help.\n",
-		stderr);
+		error_code == 0 ? stdout : stderr);
 	return error_code;
 }
 
@@ -456,7 +456,7 @@ int main(int argc, char*argv[])
 			case '?':
 			case 'h':
 			default:
-				return print_usage(-1);
+				return print_usage(0);
 
 		}
 
