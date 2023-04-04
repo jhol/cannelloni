@@ -732,7 +732,7 @@ int main(int argc, char*argv[])
 	}
 
 	// Allocate transfer buffer
-	transfer_buffer = malloc(block_size);
+	transfer_buffer = calloc(block_size, 1);
 	if (!transfer_buffer) {
 		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", block_size);
 		do_terminate = 1;
