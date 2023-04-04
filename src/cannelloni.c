@@ -319,144 +319,142 @@ int main(int argc, char*argv[])
 	while ((opt = getopt(argc, argv, "qvV?hiow80432aseljkrxb:zd:p:f:g:t:n:c:z:")) != EOF)
 
 		switch (opt) {
+		case 'd':
+			device_id = optarg;
+			if (sscanf(device_id, "%x:%x" , &vid, &pid) != 2 ) {
+				fputs ("Please specify VID & PID as \"vid:pid\" in hexadecimal format.\n", stderr);
+				return -1;
+			}
+			break;
 
-			case 'd':
-				device_id = optarg;
-				if (sscanf(device_id, "%x:%x" , &vid, &pid) != 2 ) {
-					fputs ("Please specify VID & PID as \"vid:pid\" in hexadecimal format.\n", stderr);
-					return -1;
-				}
-				break;
+		case 'p':
+			device_path = optarg;
+			if (sscanf(device_path, "%u,%u", &busnum, &devaddr) != 2 ) {
+				fputs ("Please specify bus number & device number as \"bus,dev\" in decimal format.\n", stderr);
+				return -1;
+			}
+			break;
 
-			case 'p':
-				device_path = optarg;
-				if (sscanf(device_path, "%u,%u", &busnum, &devaddr) != 2 ) {
-					fputs ("Please specify bus number & device number as \"bus,dev\" in decimal format.\n", stderr);
-					return -1;
-				}
-				break;
+		case 'f':
+			path[FIRMWARE] = optarg;
+			break;
 
-			case 'f':
-				path[FIRMWARE] = optarg;
-				break;
+		case 'g':
+			path[LOADER] = optarg;
+			break;
 
-			case 'g':
-				path[LOADER] = optarg;
-				break;
+		case 't':
+			type = optarg;
+			break;
 
-			case 't':
-				type = optarg;
-				break;
+		case 'i':
+			direction_in = 1;
+			break;
 
-			case 'i':
-				direction_in = 1;
-				break;
+		case 'o':
+			direction_in = 0;
+			break;
 
-			case 'o':
-				direction_in = 0;
-				break;
+		case '0':
+			disable_in_out = 1;
+			break;
 
-			case '0':
-				disable_in_out = 1;
-				break;
+		case 'w':
+			use_8bit_bus = 0;
+			break;
 
-			case 'w':
-				use_8bit_bus = 0;
-				break;
+		case '8':
+			use_8bit_bus = 1;
+			break;
 
-			case '8':
-				use_8bit_bus = 1;
-				break;
+		case '4':
+			num_buffers = 4;
+			break;
 
-			case '4':
-				num_buffers = 4;
-				break;
+		case '3':
+			num_buffers = 3;
+			break;
 
-			case '3':
-				num_buffers = 3;
-				break;
+		case '2':
+			num_buffers = 2;
+			break;
 
-			case '2':
-				num_buffers = 2;
-				break;
+		case 'a':
+			run_async_bus = 1;
+			break;
 
-			case 'a':
-				run_async_bus = 1;
-				break;
+		case 's':
+			run_async_bus = 0;
+			break;
 
-			case 's':
-				run_async_bus = 0;
-				break;
+		case 'b':
+			if (sscanf(optarg, "%u" , &bSize) != 1 || bSize < 2 || bSize & 1) {
+				fputs ("-b: Please specify a positive, even buffer size in bytes in decimal format.", stderr);
+				return -1;
+			}
+			block_size = bSize;
+			break;
 
-			case 'b':
-				if (sscanf(optarg, "%u" , &bSize) != 1 || bSize < 2 || bSize & 1) {
-					fputs ("-b: Please specify a positive, even buffer size in bytes in decimal format.", stderr);
-					return -1;
-				}
-				block_size = bSize;
-				break;
+		case 'n':
+			limit_transfer = 1;
+			if (sscanf(optarg, "%"PRIu64, &num_bytes_limit) != 1 || num_bytes_limit < 2 || num_bytes_limit & 1) {
+				fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
+				return -1;
+			}
+			break;
 
-			case 'n':
-				limit_transfer = 1;
-				if (sscanf(optarg, "%"PRIu64, &num_bytes_limit) != 1 || num_bytes_limit < 2 || num_bytes_limit & 1) {
-					fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
-					return -1;
-				}
-				break;
+		case 'c':
+			if (parse_option_c( optarg, &use_ifclk, &use_48mhz_internal_clk, &redirect_to_clkout, &invert_ifclkg)) {
+				return print_usage(-1);
+			}
+			break;
 
-			case 'c':
-				if (parse_option_c( optarg, &use_ifclk, &use_48mhz_internal_clk, &redirect_to_clkout, &invert_ifclkg)) {
-					return print_usage(-1);
-				}
-				break;
+		case 'z':
+			if (parse_option_z( optarg, &cpu_mhz, &enable_clkout_driver, &inver_clkout)) {
+				return print_usage(-1);
+			}
+			break;
 
-			case 'z':
-				if (parse_option_z( optarg, &cpu_mhz, &enable_clkout_driver, &inver_clkout)) {
-					return print_usage(-1);
-				}
-				break;
+		case 'e':
+			invert_queue_empty_pin = 1;
+			break;
 
-			case 'e':
-				invert_queue_empty_pin = 1;
-				break;
+		case 'l':
+			invert_queue_full_pin = 1;
+			break;
 
-			case 'l':
-				invert_queue_full_pin = 1;
-				break;
+		case 'x':
+			invert_queue_slwr_pin = 1;
+			break;
 
-			case 'x':
-				invert_queue_slwr_pin = 1;
-				break;
+		case 'r':
+			invert_queue_slrd_pin = 1;
+			break;
 
-			case 'r':
-				invert_queue_slrd_pin = 1;
-				break;
+		case 'j':
+			invert_queue_sloe_pin = 1;
+			break;
 
-			case 'j':
-				invert_queue_sloe_pin = 1;
-				break;
+		case 'k':
+			invert_queue_pktend_pin = 1;
+			break;
 
-			case 'k':
-				invert_queue_pktend_pin = 1;
-				break;
+		case 'V':
+			puts(PACKAGE_STRING);
+			return 0;
 
-			case 'V':
-				puts(PACKAGE_STRING);
-				return 0;
+		case 'v':
+			verbose++;
+			break;
 
-			case 'v':
-				verbose++;
-				break;
+		case 'q':
+			verbose--;
+			break;
 
-			case 'q':
-				verbose--;
-				break;
-
-			case '?':
-			case 'h':
-			default:
-				return print_usage(0);
-
+		case '?':
+		case 'h':
+		default:
+			return print_usage(0);
 		}
 
 	if (!path[FIRMWARE]) {
@@ -508,16 +506,16 @@ int main(int argc, char*argv[])
 	// Bulk, 512 bytes
 	firmware_config[ 2 ] |= 0x20;
 	switch (num_buffers) {
-		case 2:
-			firmware_config[ 2 ] |= 0x02;
-			break;
-		case 3:
-			firmware_config[ 2 ] |= 0x03;
-			break;
-		case 4:
-		default:
-			// Nothing to do: firmware_config[ 2 ] |= 0x00;
-			break;
+	case 2:
+		firmware_config[ 2 ] |= 0x02;
+		break;
+	case 3:
+		firmware_config[ 2 ] |= 0x03;
+		break;
+	case 4:
+	default:
+		// Nothing to do: firmware_config[ 2 ] |= 0x00;
+		break;
 	}
 
 	// Byte 3
@@ -526,16 +524,16 @@ int main(int argc, char*argv[])
 
 	// Byte 4
 	switch (cpu_mhz) {
-		case MHZ12:
-			// Nothing to do: firmware_config[ 4 ] |= 0x00;
-			break;
-		case MHZ24:
-			firmware_config[ 4 ] |= 0x08;
-			break;
-		case MHZ48:
-		default:
-			firmware_config[ 4 ] |= 0x10;
-			break;
+	case MHZ12:
+		// Nothing to do: firmware_config[ 4 ] |= 0x00;
+		break;
+	case MHZ24:
+		firmware_config[ 4 ] |= 0x08;
+		break;
+	case MHZ48:
+	default:
+		firmware_config[ 4 ] |= 0x10;
+		break;
 	}
 	if (inver_clkout) firmware_config[ 4 ] |= 1 << 2;
 	if (enable_clkout_driver) firmware_config[ 4 ] |= 1 << 1;
