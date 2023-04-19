@@ -39,8 +39,6 @@ To run Cannelloni with the provided firmware:
 
 If you have only one device connected it will be detected and configured right away. There are more options to select the device by bus location or vid:pid.
 
-Note that if you use Cannelloni (for output) from your own program, and you want to close it by sending it a signal, perhaps you will need to send another (dummy) block of bytes to let it wake from the I/O call and realize it has to finish (the dummy packet will not be sent to USB as quit has been requested). For input this doesn't matter.
-
 ## Program arguments
 ```
 Usage: cannelloni -f <path> [more options]
