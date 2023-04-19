@@ -15,7 +15,7 @@ I get 36 MiB/s in/out with my 10-year old Intel i5 PC, using one of those FX2LP 
 
 ## Installation
 
-Depedencies:
+Dependencies:
 
   * libusb-1.0
   * sdcc
