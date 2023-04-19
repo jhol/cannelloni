@@ -164,7 +164,7 @@ static double get_time() {
 	return ( (double) t.tv_sec ) + ( ( double ) t.tv_nsec ) * 0.000000001;
 }
 
-static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclkg)
+static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclk)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
@@ -187,7 +187,7 @@ static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mh
 	}
 
 	if (value[pos] == 'i') {
-		*invert_ifclkg = 1;
+		*invert_ifclk = 1;
 		pos++;
 	}
 
@@ -293,7 +293,7 @@ int main(int argc, char*argv[])
 	char use_external_ifclk = 0;
 	char use_48mhz_internal_clk = 1;
 	char enable_ifclk_output = 0;
-	char invert_ifclkg = 0;
+	char invert_ifclk = 0;
 
 	int cpu_mhz = MHZ48;
 	char enable_clkout_driver = 0;
@@ -404,7 +404,7 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'c':
-			if (parse_option_c( optarg, &use_external_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclkg)) {
+			if (parse_option_c( optarg, &use_external_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclk)) {
 				return print_usage(-1);
 			}
 			break;
@@ -495,7 +495,7 @@ int main(int argc, char*argv[])
 	if (!use_external_ifclk) firmware_config[ 1 ] |= 1 << 7;
 	if (use_48mhz_internal_clk) firmware_config[ 1 ] |= 1 << 6;
 	if (enable_ifclk_output) firmware_config[ 1 ] |= 1 << 5;
-	if (invert_ifclkg) firmware_config[ 1 ] |= 1 << 4;
+	if (invert_ifclk) firmware_config[ 1 ] |= 1 << 4;
 	if (run_async_bus) firmware_config[ 1 ] |= 1 << 3;
 	// Slave FIFO
 	firmware_config[ 1 ] |= 0x03;
