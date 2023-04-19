@@ -752,7 +752,7 @@ int main(int argc, char*argv[])
 				if (fread(transfer_buffer, num_bytes_to_transfer, 1, stdin) != 1 ) {
 					if (!feof(stdin)) logerror("Error reading data from stdin. Stopping.\n");
 					else if (verbose) logerror("stdin has reached EOF. Stopping.\n");
-					doTerminate = 1;
+					do_terminate = 1;
 					break;
 				}
 				if (do_terminate) break;
