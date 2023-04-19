@@ -58,7 +58,7 @@ Usage: cannelloni -f <path> [more options]
   -2              -- Use double buffered FX2 fifo.
   -s              -- Run in sync slave fifo mode (default)
   -a              -- Run in async slave fifo mode.
-  -b N            -- Set IO buffer size to N bytes (default 16384), even from 2 to 2^31 -2.
+  -b N            -- Set IO buffer size to N bytes (default 16384), even from 2 to 2^31 -1.
   -n M            -- Stop after M bytes, M being a number from 2 to 2^64 - 1.
   Note: M, if specified, must be divisible by N to avoid potential buffer overflow errors.
   -c [x|30[o]|48[o]][i] -- Specify interface clock:

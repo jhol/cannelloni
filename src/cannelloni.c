@@ -118,7 +118,7 @@ static int print_usage(int error_code) {
 		"  -2              -- Use double buffered FX2 fifo.\n"
 		"  -s              -- Run in sync slave fifo mode (default)\n"
 		"  -a              -- Run in async slave fifo mode.\n"
-		"  -b N            -- Set IO buffer size to N bytes (default 16384), even from 2 to 2^31 -2.\n"
+		"  -b N            -- Set IO buffer size to N bytes (default 16384), even from 2 to 2^31 -1.\n"
 		"  -n M            -- Stop after M bytes, M being a number from 2 to 2^64 - 1.\n"
 		"  Note: M, if specified, must be divisible by N to avoid potential buffer overflow errors.\n"
 		"  -c [x|30[o]|48[o]][i] -- Specify interface clock:\n"
