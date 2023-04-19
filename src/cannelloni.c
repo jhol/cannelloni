@@ -201,7 +201,7 @@ static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mh
 #define MHZ12 0
 #define MHZ24 1
 #define MHZ48 2
-static char parse_option_z(char *value, int *cpu_mhz, char *enable_clkout_driver, char *inver_clkout)
+static char parse_option_z(char *value, int *cpu_mhz, char *enable_clkout_driver, char *invert_clkout)
 {
 	int pos = 0;
 
@@ -225,7 +225,7 @@ static char parse_option_z(char *value, int *cpu_mhz, char *enable_clkout_driver
 	}
 
 	if (value[pos] == 'i') {
-		*inver_clkout = 1;
+		*invert_clkout = 1;
 		pos++;
 	}
 
@@ -297,7 +297,7 @@ int main(int argc, char*argv[])
 
 	int cpu_mhz = MHZ48;
 	char enable_clkout_driver = 0;
-	char inver_clkout = 0;
+	char invert_clkout = 0;
 
 	char invert_queue_full_pin = 0;
 	char invert_queue_empty_pin = 0;
@@ -410,7 +410,7 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'z':
-			if (parse_option_z( optarg, &cpu_mhz, &enable_clkout_driver, &inver_clkout)) {
+			if (parse_option_z( optarg, &cpu_mhz, &enable_clkout_driver, &invert_clkout)) {
 				return print_usage(-1);
 			}
 			break;
@@ -535,7 +535,7 @@ int main(int argc, char*argv[])
 		firmware_config[ 4 ] |= 0x10;
 		break;
 	}
-	if (inver_clkout) firmware_config[ 4 ] |= 1 << 2;
+	if (invert_clkout) firmware_config[ 4 ] |= 1 << 2;
 	if (enable_clkout_driver) firmware_config[ 4 ] |= 1 << 1;
 
 	// Byte 5
