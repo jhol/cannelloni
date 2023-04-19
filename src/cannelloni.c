@@ -611,8 +611,8 @@ int main(int argc, char*argv[])
 		if (!dev) {
 			libusb_free_device_list(devs, 1);
 			libusb_exit(NULL);
-			logerror("Could not find a known device - please specify type and/or vid:pid and/or bus,dev\n");
-			return print_usage(-1);
+			logerror("Could not find a known device - please make sure it is connected. Or specify type, vid:pid and/or bus,dev\n");
+			return -1;
 		}
 		status = libusb_open(dev, &device);
 		libusb_free_device_list(devs, 1);
