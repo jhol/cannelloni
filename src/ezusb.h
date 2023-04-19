@@ -107,6 +107,9 @@ extern int ezusb_load_eeprom(libusb_device_handle *device,
 /* Verbosity level (default 1). Can be increased or decreased with options v/q  */
 extern int verbose;
 
+/* Define to the attribute for enabling parameter checks on printf-like functions. */
+#define PRINTF_FORMAT(a, b) __attribute__ ((__format__ (__printf__, a, b)))
+
 extern void logerror(const char *format, ...) PRINTF_FORMAT(1, 2);
 
 #ifdef __cplusplus
