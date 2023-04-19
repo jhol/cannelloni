@@ -124,7 +124,7 @@ static int print_usage(int error_code) {
 		"  -c [x|30[o]|48[o]][i] -- Specify interface clock:\n"
 		"                        x -> External from IFCLK pin.\n"
 		"                        30 or 48 -> Internal clock 30/48MHz (default: 48).\n"
-		"                        Suffix 'o' to enable redirection of clock to CLKOUT pin.\n"
+		"                        Suffix 'o' to enable output to IFCLK pin.\n"
 		"                        'i' to invert IFCLK.\n"
 		"  -z [12|24|48][o|z][i] -- Specify 8051 frequency in MHz (default: 48) and CLKOUT pin:\n"
 		"                        o -> Enable CLKOUT pin driver output.\n"
@@ -164,7 +164,7 @@ static double get_time() {
 	return ( (double) t.tv_sec ) + ( ( double ) t.tv_nsec ) * 0.000000001;
 }
 
-static char parse_option_c(char *value, char *use_ifclk, char *use_48mhz_internal_clk, char *redirect_to_clkout, char *invert_ifclkg)
+static char parse_option_c(char *value, char *use_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclkg)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
@@ -174,14 +174,14 @@ static char parse_option_c(char *value, char *use_ifclk, char *use_48mhz_interna
 		*use_48mhz_internal_clk = 0;
 		pos+= 2;
 		if (value[pos] == 'o') {
-			*redirect_to_clkout = 1;
+			*enable_ifclk_output = 1;
 			pos++;
 		}
 	} else if (value[pos] == '4' && value[pos + 1] == '8') {
 		*use_48mhz_internal_clk = 1;
 		pos+= 2;
 		if (value[pos] == 'o') {
-			*redirect_to_clkout = 1;
+			*enable_ifclk_output = 1;
 			pos++;
 		}
 	}
@@ -292,7 +292,7 @@ int main(int argc, char*argv[])
 
 	char use_ifclk = 0;
 	char use_48mhz_internal_clk = 1;
-	char redirect_to_clkout = 0;
+	char enable_ifclk_output = 0;
 	char invert_ifclkg = 0;
 
 	int cpu_mhz = MHZ48;
@@ -404,7 +404,7 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'c':
-			if (parse_option_c( optarg, &use_ifclk, &use_48mhz_internal_clk, &redirect_to_clkout, &invert_ifclkg)) {
+			if (parse_option_c( optarg, &use_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclkg)) {
 				return print_usage(-1);
 			}
 			break;
@@ -494,7 +494,7 @@ int main(int argc, char*argv[])
 	// Byte 1
 	if (!use_ifclk) firmware_config[ 1 ] |= 1 << 7;
 	if (use_48mhz_internal_clk) firmware_config[ 1 ] |= 1 << 6;
-	if (redirect_to_clkout) firmware_config[ 1 ] |= 1 << 5;
+	if (enable_ifclk_output) firmware_config[ 1 ] |= 1 << 5;
 	if (invert_ifclkg) firmware_config[ 1 ] |= 1 << 4;
 	if (run_async_bus) firmware_config[ 1 ] |= 1 << 3;
 	// Slave FIFO

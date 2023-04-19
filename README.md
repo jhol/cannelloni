@@ -66,7 +66,7 @@ Usage: cannelloni -f <path> [more options]
   -c [x|30[o]|48[o]][i] -- Specify interface clock:
                         x -> External from IFCLK pin.
                         30 or 48 -> Internal clock 30/48MHz (default: 48).
-                        Suffix 'o' to enable redirection of clock to CLKOUT pin.
+                        Suffix 'o' to enable output to IFCLK pin.
                         'i' to invert IFCLK.
   -z [12|24|48][o|z][i] -- Specify 8051 frequency in MHz (default: 48) and CLKOUT pin:
                         o -> Enable CLKOUT pin driver output.
