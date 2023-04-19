@@ -688,6 +688,9 @@ int main(int argc, char*argv[])
 	libusb_release_interface(device, 0);
 	libusb_close(device);
 
+	// Exit if loading the firmware or programming the device went wrong
+	if (status < 0) goto err;
+
 	// After device has been programmed, we reopen the device for the data transfer.
 
 	if (dev) {
