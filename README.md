@@ -111,7 +111,7 @@ Most program arguments are different from fx2pipe, though some are the same.
 - New device specifier: ```-t <type>``` Uses the first FX device of that type (an21, fx, fx2, fx2lp, fx3)
 - New device specifier: ```-p <bus,addr>``` Uses the device identified with a libusb bus number and device address path.
 - ```-ifclk=[x|30[o]|48[o]][i]``` parameter has been renamed to ```-c [x|30[o]|48[o]][i]``` Additionally, the flag ```o``` is no longer enabled by default.
-- ```-cko=[12|24|48][o|z][i]``` parameter has been renamed to ```-k [12|24|48][o|z][i]```. Additionally, the flag ```o``` is no longer enabled by default.
+- ```-cko=[12|24|48][o|z][i]``` parameter has been renamed to ```-z [12|24|48][o|z][i]```. Additionally, the flag ```o``` is no longer enabled by default.
 - New option ```-l```: Invert polarity of 'queue full' FF flag output pin (i.e. assert high)
 - New option ```-e```: Invert polarity of 'queue empty' EF flag output pin (i.e. assert high)
 - New option ```-x```: Invert polarity of 'SLWR' input pin (i.e. assert high)
