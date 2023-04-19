@@ -164,11 +164,11 @@ static double get_time() {
 	return ( (double) t.tv_sec ) + ( ( double ) t.tv_nsec ) * 0.000000001;
 }
 
-static char parse_option_c(char *value, char *use_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclkg)
+static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclkg)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
-		*use_ifclk = 1;
+		*use_external_ifclk = 1;
 		pos++;
 	} else if (value[pos] == '3' && value[pos + 1] == '0') {
 		*use_48mhz_internal_clk = 0;
@@ -290,7 +290,7 @@ int main(int argc, char*argv[])
 	uint64_t total_bytes_transferred = 0;
 	int num_bytes_transferred;
 
-	char use_ifclk = 0;
+	char use_external_ifclk = 0;
 	char use_48mhz_internal_clk = 1;
 	char enable_ifclk_output = 0;
 	char invert_ifclkg = 0;
@@ -404,7 +404,7 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'c':
-			if (parse_option_c( optarg, &use_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclkg)) {
+			if (parse_option_c( optarg, &use_external_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclkg)) {
 				return print_usage(-1);
 			}
 			break;
@@ -492,7 +492,7 @@ int main(int argc, char*argv[])
 	firmware_config[ 0 ] = direction_in ? 0x12 : 0x21;
 
 	// Byte 1
-	if (!use_ifclk) firmware_config[ 1 ] |= 1 << 7;
+	if (!use_external_ifclk) firmware_config[ 1 ] |= 1 << 7;
 	if (use_48mhz_internal_clk) firmware_config[ 1 ] |= 1 << 6;
 	if (enable_ifclk_output) firmware_config[ 1 ] |= 1 << 5;
 	if (invert_ifclkg) firmware_config[ 1 ] |= 1 << 4;
