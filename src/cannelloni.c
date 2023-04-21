@@ -148,7 +148,7 @@ char do_terminate = 0;
 int num_signals = 0;
 static void signal_handler(int)
 {
-	if ( ++num_signals >= 5 ) {
+	if (++num_signals >= 5) {
 		fprintf(stderr, "\nReceived too many signals, forcibly stopping...\n");
 		exit(-1);
 	}
@@ -160,8 +160,8 @@ static void signal_handler(int)
 
 static double get_time() {
 	struct timespec t;
-	clock_gettime( CLOCK_MONOTONIC, &t );
-	return ( (double) t.tv_sec ) + ( ( double ) t.tv_nsec ) * 0.000000001;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return ((double) t.tv_sec) + ((double) t.tv_nsec) * 0.000000001;
 }
 
 static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclk)
@@ -311,8 +311,8 @@ int main(int argc, char*argv[])
 	double time0, time1, delta_time, speed;
 
 	// Install signal handlers
-	signal( SIGTERM, signal_handler );
-	signal( SIGINT, signal_handler );
+	signal(SIGTERM, signal_handler);
+	signal(SIGINT, signal_handler);
 
 	// Parse arguments
 
@@ -404,13 +404,13 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'c':
-			if (parse_option_c( optarg, &use_external_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclk)) {
+			if (parse_option_c(optarg, &use_external_ifclk, &use_48mhz_internal_clk, &enable_ifclk_output, &invert_ifclk)) {
 				return print_usage(-1);
 			}
 			break;
 
 		case 'z':
-			if (parse_option_z( optarg, &cpu_mhz, &enable_clkout_output, &invert_clkout)) {
+			if (parse_option_z(optarg, &cpu_mhz, &enable_clkout_output, &invert_clkout)) {
 				return print_usage(-1);
 			}
 			break;
@@ -466,7 +466,7 @@ int main(int argc, char*argv[])
 		return print_usage(-1);
 	}
 
-	if ( num_bytes_limit % block_size != 0 ) {
+	if (num_bytes_limit % block_size != 0) {
 		logerror("Number of bytes to transfer must be divisible by buffer size.\n");
 		return print_usage(-1);
 	}
@@ -520,7 +520,7 @@ int main(int argc, char*argv[])
 
 	// Byte 3
 	firmware_config[ 3 ] = direction_in ? 0x0d : 0x11;
-	if ( use_8bit_bus ) firmware_config[ 3 ] &= 0xFE;
+	if (use_8bit_bus) firmware_config[ 3 ] &= 0xFE;
 
 	// Byte 4
 	switch (cpu_mhz) {
@@ -547,7 +547,7 @@ int main(int argc, char*argv[])
 	if (invert_queue_pktend_pin) firmware_config[ 5 ] |= 1 << 5;
 
 
-	if ( do_terminate ) exit(-1);
+	if (do_terminate) exit(-1);
 
 	// -- Finished configuration preparation. Start accessing the device with libusb
 
@@ -808,7 +808,7 @@ int main(int argc, char*argv[])
 		// Seconds
 		delta_time = time1 - time0;
 		// MiB/s
-		speed = ( total_bytes_transferred / (1024.0 * 1024.0) ) / delta_time;
+		speed = (total_bytes_transferred / (1024.0 * 1024.0)) / delta_time;
 
 		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n", total_bytes_transferred, delta_time, speed);
 
