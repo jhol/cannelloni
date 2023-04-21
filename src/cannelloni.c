@@ -316,7 +316,7 @@ int main(int argc, char*argv[])
 
 	// Parse arguments
 
-	while ((opt = getopt(argc, argv, "qvV?hiow80432aseljkrxuz:b:d:p:f:g:t:n:c:")) != EOF)
+	while ((opt = getopt(argc, argv, "qvV?hiow80432aseljkrxz:b:d:p:f:g:t:n:c:")) != EOF)
 
 		switch (opt) {
 		case 'd':
