@@ -471,6 +471,11 @@ int main(int argc, char*argv[])
 		return print_usage(-1);
 	}
 
+	if (!use_8bit_bus && (block_size & 1)) {
+		logerror("When using 16-bit wide bus (option '-w'), blockSize (option '-b') must be even.\n");
+		return print_usage(-1);
+	}
+
 	// Determine the target type
 	if (type) {
 		for (i=0; i<FX_TYPE_MAX; i++) {
