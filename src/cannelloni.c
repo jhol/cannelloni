@@ -76,6 +76,8 @@ static bool dosyslog = false;
 #define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
 #endif
 
+#define UNLIMITED	(UINT64_MAX)
+
 // The 6 bytes of config which are written to the
 // controller RAM after uploading the firmware.
 uint8_t firmware_config[ 6 ];
@@ -278,8 +280,7 @@ int main(int argc, char*argv[])
 	int block_size = 16384;
 	unsigned int bSize = 0;
 	unsigned char *transfer_buffer;
-	bool limit_transfer = false;
-	uint64_t num_bytes_limit = 0;
+	uint64_t num_bytes_limit = UNLIMITED;
 	uint64_t num_bytes_to_transfer = 0;
 	uint64_t total_bytes_left_to_transfer = 0;
 	uint64_t total_bytes_transferred = 0;
@@ -391,7 +392,6 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'n':
-			limit_transfer = true;
 			if (sscanf(optarg, "%"PRIu64, &num_bytes_limit) != 1 || num_bytes_limit < 2 || num_bytes_limit & 1) {
 				fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
 				return -1;
@@ -461,7 +461,7 @@ int main(int argc, char*argv[])
 		return print_usage(-1);
 	}
 
-	if (num_bytes_limit % block_size != 0) {
+	if (num_bytes_limit != UNLIMITED && num_bytes_limit % block_size != 0) {
 		logerror("Number of bytes to transfer must be divisible by buffer size.\n");
 		return print_usage(-1);
 	}
@@ -736,7 +736,7 @@ int main(int argc, char*argv[])
 	// Select endpoint
 	endpoint = direction_in ? 0x86 : 0x02;
 
-	if (limit_transfer) total_bytes_left_to_transfer = num_bytes_limit;
+	total_bytes_left_to_transfer = num_bytes_limit;
 
 	time0 = get_time();
 
@@ -744,7 +744,8 @@ int main(int argc, char*argv[])
 	while (!do_terminate) {
 
 		num_bytes_to_transfer = block_size;
-		if (limit_transfer && num_bytes_to_transfer >= total_bytes_left_to_transfer ) {
+		if (total_bytes_left_to_transfer != UNLIMITED &&
+			num_bytes_to_transfer >= total_bytes_left_to_transfer) {
 			num_bytes_to_transfer = total_bytes_left_to_transfer;
 			do_terminate = true;
 		}
@@ -770,7 +771,8 @@ int main(int argc, char*argv[])
 			break;
 		}
 
-		total_bytes_left_to_transfer -= num_bytes_transferred;
+		if (total_bytes_left_to_transfer != UNLIMITED) 
+			total_bytes_left_to_transfer -= num_bytes_transferred;
 		total_bytes_transferred += num_bytes_transferred;
 
 		if (direction_in && !disable_in_out)
