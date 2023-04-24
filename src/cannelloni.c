@@ -48,15 +48,16 @@
  */
 
 #include <inttypes.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <signal.h>
-#include <stdint.h>
 #include <stdarg.h>
-#include <sys/types.h>
-#include <getopt.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
+
+#include <getopt.h>
+#include <sys/types.h>
 
 #include <libusb-1.0/libusb.h>
 
