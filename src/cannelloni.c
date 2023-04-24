@@ -165,7 +165,8 @@ static double get_time() {
 	return ((double) t.tv_sec) + ((double) t.tv_nsec) * 0.000000001;
 }
 
-static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mhz_internal_clk, char *enable_ifclk_output, char *invert_ifclk)
+static char parse_option_c(const char *value, char *use_external_ifclk, char *use_48mhz_internal_clk,
+	char *enable_ifclk_output, char *invert_ifclk)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
@@ -202,7 +203,7 @@ static char parse_option_c(char *value, char *use_external_ifclk, char *use_48mh
 #define MHZ12 0
 #define MHZ24 1
 #define MHZ48 2
-static char parse_option_z(char *value, int *cpu_mhz, char *enable_clkout_output, char *invert_clkout)
+static char parse_option_z(const char *value, int *cpu_mhz, char *enable_clkout_output, char *invert_clkout)
 {
 	int pos = 0;
 
