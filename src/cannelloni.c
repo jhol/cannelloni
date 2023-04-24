@@ -50,6 +50,7 @@
 #include <inttypes.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -145,7 +146,7 @@ static int print_usage(int error_code) {
 	return error_code;
 }
 
-char do_terminate = 0;
+bool do_terminate = false;
 int num_signals = 0;
 static void signal_handler(int)
 {
@@ -155,7 +156,7 @@ static void signal_handler(int)
 	}
 	else {
 		if (verbose) fprintf(stderr, "\nSignal received, stopping after the current transfer...\n");
-		do_terminate = 1;
+		do_terminate = true;
 	}
 }
 
@@ -165,45 +166,41 @@ static double get_time() {
 	return ((double) t.tv_sec) + ((double) t.tv_nsec) * 0.000000001;
 }
 
-static char parse_option_c(const char *value, char *use_external_ifclk, char *use_48mhz_internal_clk,
-	char *enable_ifclk_output, char *invert_ifclk)
+static bool parse_option_c(const char *value, bool *use_external_ifclk, bool *use_48mhz_internal_clk,
+	bool *enable_ifclk_output, bool *invert_ifclk)
 {
 	int pos = 0;
 	if (value[pos] == 'x') {
-		*use_external_ifclk = 1;
+		*use_external_ifclk = true;
 		pos++;
 	} else if (value[pos] == '3' && value[pos + 1] == '0') {
-		*use_48mhz_internal_clk = 0;
+		*use_48mhz_internal_clk = false;
 		pos+= 2;
 		if (value[pos] == 'o') {
-			*enable_ifclk_output = 1;
+			*enable_ifclk_output = true;
 			pos++;
 		}
 	} else if (value[pos] == '4' && value[pos + 1] == '8') {
-		*use_48mhz_internal_clk = 1;
+		*use_48mhz_internal_clk = true;
 		pos+= 2;
 		if (value[pos] == 'o') {
-			*enable_ifclk_output = 1;
+			*enable_ifclk_output = true;
 			pos++;
 		}
 	}
 
 	if (value[pos] == 'i') {
-		*invert_ifclk = 1;
+		*invert_ifclk = true;
 		pos++;
 	}
 
-	if (value[pos] != 0) {
-		return 1;
-	}
-
-	return 0;
+	return value[pos] != 0;
 }
 
 #define MHZ12 0
 #define MHZ24 1
 #define MHZ48 2
-static char parse_option_z(const char *value, int *cpu_mhz, char *enable_clkout_output, char *invert_clkout)
+static char parse_option_z(const char *value, int *cpu_mhz, bool *enable_clkout_output, bool *invert_clkout)
 {
 	int pos = 0;
 
@@ -219,23 +216,19 @@ static char parse_option_z(const char *value, int *cpu_mhz, char *enable_clkout_
 	}
 
 	if (value[pos] == 'o') {
-		*enable_clkout_output = 1;
+		*enable_clkout_output = true;
 		pos++;
 	} else if (value[pos] == 'z') {
-		*enable_clkout_output = 0;
+		*enable_clkout_output = false;
 		pos++;
 	}
 
 	if (value[pos] == 'i') {
-		*invert_clkout = 1;
+		*invert_clkout = true;
 		pos++;
 	}
 
-	if (value[pos] != 0) {
-		return 1;
-	}
-
-	return 0;
+	return value[pos] != 0;
 }
 
 static void pre_reset_callback(libusb_device_handle *device)
@@ -276,37 +269,37 @@ int main(int argc, char*argv[])
 	struct libusb_device_descriptor desc;
 
 	int alternate_function;
-	char direction_in = 1;
-	char disable_in_out = 0;
-	char use_8bit_bus = 0;
+	bool direction_in = true;
+	bool disable_in_out = false;
+	bool use_8bit_bus = false;
 	int num_buffers = 4;
-	char run_async_bus = 0;
+	bool run_async_bus = false;
 
 	int block_size = 16384;
 	unsigned int bSize = 0;
 	unsigned char *transfer_buffer;
-	char limit_transfer = 0;
+	bool limit_transfer = false;
 	uint64_t num_bytes_limit = 0;
 	uint64_t num_bytes_to_transfer = 0;
 	uint64_t total_bytes_left_to_transfer = 0;
 	uint64_t total_bytes_transferred = 0;
 	int num_bytes_transferred;
 
-	char use_external_ifclk = 0;
-	char use_48mhz_internal_clk = 1;
-	char enable_ifclk_output = 0;
-	char invert_ifclk = 0;
+	bool use_external_ifclk = false;
+	bool use_48mhz_internal_clk = true;
+	bool enable_ifclk_output = false;
+	bool invert_ifclk = false;
 
 	int cpu_mhz = MHZ48;
-	char enable_clkout_output = 0;
-	char invert_clkout = 0;
+	bool enable_clkout_output = false;
+	bool invert_clkout = false;
 
-	char invert_queue_full_pin = 0;
-	char invert_queue_empty_pin = 0;
-	char invert_queue_slwr_pin = 0;
-	char invert_queue_slrd_pin = 0;
-	char invert_queue_sloe_pin = 0;
-	char invert_queue_pktend_pin = 0;
+	bool invert_queue_full_pin = false;
+	bool invert_queue_empty_pin = false;
+	bool invert_queue_slwr_pin = false;
+	bool invert_queue_slrd_pin = false;
+	bool invert_queue_sloe_pin = false;
+	bool invert_queue_pktend_pin = false;
 
 	unsigned char endpoint;
 
@@ -350,23 +343,23 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'i':
-			direction_in = 1;
+			direction_in = true;
 			break;
 
 		case 'o':
-			direction_in = 0;
+			direction_in = false;
 			break;
 
 		case '0':
-			disable_in_out = 1;
+			disable_in_out = true;
 			break;
 
 		case 'w':
-			use_8bit_bus = 0;
+			use_8bit_bus = false;
 			break;
 
 		case '8':
-			use_8bit_bus = 1;
+			use_8bit_bus = true;
 			break;
 
 		case '4':
@@ -382,11 +375,11 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'a':
-			run_async_bus = 1;
+			run_async_bus = true;
 			break;
 
 		case 's':
-			run_async_bus = 0;
+			run_async_bus = false;
 			break;
 
 		case 'b':
@@ -398,7 +391,7 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'n':
-			limit_transfer = 1;
+			limit_transfer = true;
 			if (sscanf(optarg, "%"PRIu64, &num_bytes_limit) != 1 || num_bytes_limit < 2 || num_bytes_limit & 1) {
 				fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
 				return -1;
@@ -418,27 +411,27 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'e':
-			invert_queue_empty_pin = 1;
+			invert_queue_empty_pin = true;
 			break;
 
 		case 'l':
-			invert_queue_full_pin = 1;
+			invert_queue_full_pin = true;
 			break;
 
 		case 'x':
-			invert_queue_slwr_pin = 1;
+			invert_queue_slwr_pin = true;
 			break;
 
 		case 'r':
-			invert_queue_slrd_pin = 1;
+			invert_queue_slrd_pin = true;
 			break;
 
 		case 'j':
-			invert_queue_sloe_pin = 1;
+			invert_queue_sloe_pin = true;
 			break;
 
 		case 'k':
-			invert_queue_pktend_pin = 1;
+			invert_queue_pktend_pin = true;
 			break;
 
 		case 'V':
@@ -737,7 +730,7 @@ int main(int argc, char*argv[])
 	transfer_buffer = calloc(block_size, 1);
 	if (!transfer_buffer) {
 		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", block_size);
-		do_terminate = 1;
+		do_terminate = true;
 	}
 
 	// Select endpoint
@@ -753,7 +746,7 @@ int main(int argc, char*argv[])
 		num_bytes_to_transfer = block_size;
 		if (limit_transfer && num_bytes_to_transfer >= total_bytes_left_to_transfer ) {
 			num_bytes_to_transfer = total_bytes_left_to_transfer;
-			do_terminate = 1;
+			do_terminate = true;
 		}
 
 		if (!direction_in) {
@@ -762,7 +755,7 @@ int main(int argc, char*argv[])
 				if (fread(transfer_buffer, num_bytes_to_transfer, 1, stdin) != 1 ) {
 					if (!feof(stdin)) logerror("Error reading data from stdin. Stopping.\n");
 					else if (verbose) logerror("stdin has reached EOF. Stopping.\n");
-					do_terminate = 1;
+					do_terminate = true;
 					break;
 				}
 				if (do_terminate) break;
@@ -773,7 +766,7 @@ int main(int argc, char*argv[])
 		status = libusb_bulk_transfer(device, endpoint, transfer_buffer, num_bytes_to_transfer, &num_bytes_transferred, 1000);
 		if (status) {
 			logerror("Data transfer failed: %s\n", libusb_error_name(status));
-			do_terminate = 1;
+			do_terminate = true;
 			break;
 		}
 
@@ -784,7 +777,7 @@ int main(int argc, char*argv[])
 			// Write to stdout
 			if (fwrite(transfer_buffer, num_bytes_transferred, 1, stdout) != 1 ) {
 				logerror("Error writing to stdout. Stopping.");
-				do_terminate = 1;
+				do_terminate = true;
 				break;
 			}
 
