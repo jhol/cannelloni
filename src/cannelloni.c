@@ -741,14 +741,10 @@ int main(int argc, char*argv[])
 	time0 = get_time();
 
 	// Data transfer loop
-	while (!do_terminate) {
-
-		num_bytes_to_transfer = block_size;
-		if (total_bytes_left_to_transfer != UNLIMITED &&
-			num_bytes_to_transfer >= total_bytes_left_to_transfer) {
-			num_bytes_to_transfer = total_bytes_left_to_transfer;
-			do_terminate = true;
-		}
+	while (!do_terminate && total_bytes_left_to_transfer > 0) {
+		num_bytes_to_transfer = (total_bytes_left_to_transfer != UNLIMITED &&
+			num_bytes_to_transfer >= total_bytes_left_to_transfer) ?
+			total_bytes_left_to_transfer : block_size;
 
 		if (!direction_in) {
 			if (!disable_in_out) {
@@ -756,7 +752,6 @@ int main(int argc, char*argv[])
 				if (fread(transfer_buffer, num_bytes_to_transfer, 1, stdin) != 1 ) {
 					if (!feof(stdin)) logerror("Error reading data from stdin. Stopping.\n");
 					else if (verbose) logerror("stdin has reached EOF. Stopping.\n");
-					do_terminate = true;
 					break;
 				}
 				if (do_terminate) break;
@@ -767,7 +762,6 @@ int main(int argc, char*argv[])
 		status = libusb_bulk_transfer(device, endpoint, transfer_buffer, num_bytes_to_transfer, &num_bytes_transferred, 1000);
 		if (status) {
 			logerror("Data transfer failed: %s\n", libusb_error_name(status));
-			do_terminate = true;
 			break;
 		}
 
@@ -779,7 +773,6 @@ int main(int argc, char*argv[])
 			// Write to stdout
 			if (fwrite(transfer_buffer, num_bytes_transferred, 1, stdout) != 1 ) {
 				logerror("Error writing to stdout. Stopping.");
-				do_terminate = true;
 				break;
 			}
 
