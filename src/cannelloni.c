@@ -162,10 +162,11 @@ static void signal_handler(int)
 	}
 }
 
-static double get_time() {
+static uint64_t get_time(void)
+{
 	struct timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
-	return ((double) t.tv_sec) + ((double) t.tv_nsec) * 0.000000001;
+	return (uint64_t)(t.tv_sec * 1000000000ULL) + t.tv_nsec;
 }
 
 static bool parse_option_c(const char *value, bool *use_external_ifclk, bool *use_48mhz_internal_clk,
@@ -303,8 +304,6 @@ int main(int argc, char*argv[])
 	bool invert_queue_pktend_pin = false;
 
 	unsigned char endpoint;
-
-	double time0, time1, delta_time, speed;
 
 	// Install signal handlers
 	signal(SIGTERM, signal_handler);
@@ -738,7 +737,7 @@ int main(int argc, char*argv[])
 
 	total_bytes_left_to_transfer = num_bytes_limit;
 
-	time0 = get_time();
+	const uint64_t time0 = get_time();
 
 	// Data transfer loop
 	while (!do_terminate && total_bytes_left_to_transfer > 0) {
@@ -782,7 +781,7 @@ int main(int argc, char*argv[])
 
 	}
 
-	time1 = get_time();
+	const uint64_t time1 = get_time();
 
 	// Free transfer buffer
 	free(transfer_buffer);
@@ -799,11 +798,11 @@ int main(int argc, char*argv[])
 	// Print result statistics
 
 	if (verbose) {
-
 		// Seconds
-		delta_time = time1 - time0;
+		const float delta_time = (time1 - time0) * 1e-9f;
+
 		// MiB/s
-		speed = (total_bytes_transferred / (1024.0 * 1024.0)) / delta_time;
+		const float speed = total_bytes_transferred / (delta_time * 1024.f * 1024.f);
 
 		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n", total_bytes_transferred, delta_time, speed);
 
