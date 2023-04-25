@@ -594,17 +594,15 @@ claim_interface_failed:
 	return ret;
 }
 
-#define FIRMWARE 0
-#define LOADER 1
 int main(int argc, char*argv[])
 {
 	fx_known_device known_device[] = FX_KNOWN_DEVICES;
-	const char *path[] = { NULL, NULL };
+	const char *firmware_path = NULL, *loader_path = NULL;
 	const char *device_id = NULL;
 	const char *device_path = getenv("DEVICE");
 	const char *type = NULL;
 	const char *fx_name[FX_TYPE_MAX] = FX_TYPE_NAMES;
-	int fx_type = FX_TYPE_UNDEFINED, img_type[ARRAYSIZE(path)];
+	int fx_type = FX_TYPE_UNDEFINED;
 
 	int opt, status;
 	unsigned int i, j;
@@ -662,11 +660,11 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'f':
-			path[FIRMWARE] = optarg;
+			firmware_path = optarg;
 			break;
 
 		case 'g':
-			path[LOADER] = optarg;
+			loader_path = optarg;
 			break;
 
 		case 't':
@@ -782,7 +780,7 @@ int main(int argc, char*argv[])
 			return print_usage(0);
 		}
 
-	if (!path[FIRMWARE]) {
+	if (!firmware_path) {
 		logerror("No firmware specified!\n");
 		return print_usage(-1);
 	}
@@ -971,21 +969,21 @@ int main(int argc, char*argv[])
 		logerror("microcontroller type: %s\n", fx_name[fx_type]);
 
 	// Program the firmware in the microcontroller
-	if (!path[LOADER]) {
+	if (!loader_path) {
 		// Single stage, put into internal memory
 		if (verbose > 1)
 			logerror("single stage: load on-chip memory\n");
-		status = load_image(device, path[FIRMWARE], fx_type, 0, pre_reset_callback);
+		status = load_image(device, firmware_path, fx_type, 0, pre_reset_callback);
 	} else {
 		// two-stage, put loader into external memory
 		if (verbose > 1)
 			logerror("1st stage: load 2nd stage loader\n");
-		status = load_image(device, path[LOADER], fx_type, 0, pre_reset_callback);
+		status = load_image(device, loader_path, fx_type, 0, pre_reset_callback);
 		if (status == 0) {
 			// two-stage, put firmware into internal memory
 			if (verbose > 1)
 				logerror("2nd state: load on-chip memory\n");
-			status = load_image(device, path[FIRMWARE], fx_type, 1, NULL);
+			status = load_image(device, firmware_path, fx_type, 1, NULL);
 		}
 	}
 
