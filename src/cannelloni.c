@@ -646,7 +646,7 @@ int main(int argc, char*argv[])
 		case 'd':
 			device_id = optarg;
 			if (sscanf(device_id, "%x:%x" , &vid, &pid) != 2 ) {
-				fputs ("Please specify VID & PID as \"vid:pid\" in hexadecimal format.\n", stderr);
+				fputs("Please specify VID & PID as \"vid:pid\" in hexadecimal format.\n", stderr);
 				return -1;
 			}
 			break;
@@ -654,7 +654,7 @@ int main(int argc, char*argv[])
 		case 'p':
 			device_path = optarg;
 			if (sscanf(device_path, "%u,%u", &busnum, &devaddr) != 2 ) {
-				fputs ("Please specify bus number & device number as \"bus,dev\" in decimal format.\n", stderr);
+				fputs("Please specify bus number & device number as \"bus,dev\" in decimal format.\n", stderr);
 				return -1;
 			}
 			break;
@@ -713,7 +713,7 @@ int main(int argc, char*argv[])
 
 		case 'b':
 			if (sscanf(optarg, "%u" , &bSize) != 1 || bSize < 2 || bSize & 1) {
-				fputs ("-b: Please specify a positive, even buffer size in bytes in decimal format.", stderr);
+				fputs("-b: Please specify a positive, even buffer size in bytes in decimal format.", stderr);
 				return -1;
 			}
 			block_size = bSize;
@@ -721,7 +721,7 @@ int main(int argc, char*argv[])
 
 		case 'n':
 			if (sscanf(optarg, "%"PRIu64, &num_bytes_limit) != 1 || num_bytes_limit < 2 || num_bytes_limit & 1) {
-				fputs ("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
+				fputs("-n: Please specify a positive, even number of bytes in decimal format.", stderr);
 				return -1;
 			}
 			break;
