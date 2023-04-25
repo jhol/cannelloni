@@ -58,7 +58,10 @@
 #include <time.h>
 
 #include <getopt.h>
+#include <poll.h>
+#include <sys/signalfd.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <libusb-1.0/libusb.h>
 
@@ -76,7 +79,24 @@ static bool dosyslog = false;
 #define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
 #endif
 
-#define UNLIMITED	(UINT64_MAX)
+#define UNLIMITED		(UINT64_MAX)
+#define NUM_TRANSFERS		(32)
+#define MAX_EMPTY_TRANSFERS	(8)
+#define MAX_POLL_TIMEOUT	(1000)
+
+struct cannelloni_state {
+	libusb_device_handle *handle;
+	bool abort;
+	int num_signals;
+	bool direction_in;
+	FILE *file;
+	size_t block_size;
+	uint64_t total_bytes_left_to_transfer;
+	uint64_t total_bytes_transferred;
+	struct libusb_transfer **transfers;
+	int submitted_transfers;
+	int empty_transfer_count;
+};
 
 // The 6 bytes of config which are written to the
 // controller RAM after uploading the firmware.
@@ -146,20 +166,6 @@ static int print_usage(int error_code) {
 		"  -h              -- Print this help.\n",
 		error_code == 0 ? stdout : stderr);
 	return error_code;
-}
-
-bool do_terminate = false;
-int num_signals = 0;
-static void signal_handler(int)
-{
-	if (++num_signals >= 5) {
-		fprintf(stderr, "\nReceived too many signals, forcibly stopping...\n");
-		exit(-1);
-	}
-	else {
-		if (verbose) fprintf(stderr, "\nSignal received, stopping after the current transfer...\n");
-		do_terminate = true;
-	}
 }
 
 static uint64_t get_time(void)
@@ -250,6 +256,313 @@ static void pre_reset_callback(libusb_device_handle *device)
 	}
 }
 
+static void free_transfer(struct libusb_transfer *transfer)
+{
+	struct cannelloni_state *const state = transfer->user_data;
+
+	free(transfer->buffer);
+	transfer->buffer = NULL;
+	libusb_free_transfer(transfer);
+
+	for (unsigned int i = 0; i != NUM_TRANSFERS; i++) {
+		if (state->transfers[i] == transfer) {
+			state->transfers[i] = NULL;
+			break;
+		}
+	}
+
+	state->submitted_transfers--;
+}
+
+static void abort_transfers(struct cannelloni_state *state)
+{
+	state->abort = true;
+	for (unsigned int i = 0; i != NUM_TRANSFERS; i++) {
+		struct libusb_transfer *const transfer = state->transfers[i];
+		if (transfer)
+			libusb_cancel_transfer(transfer);
+	}
+}
+
+static int prepare_out_buffer(struct cannelloni_state *state, uint8_t *buffer)
+{
+	if (!state->file)
+		return state->block_size;
+
+	const uint64_t num_bytes_read = fread(buffer, 1, state->block_size, state->file);
+	if (num_bytes_read != state->block_size) {
+		if (!feof(stdin))
+			logerror("Error reading data from stdin. Stopping.\n");
+		else if (verbose)
+			logerror("stdin has reached EOF. Stopping.\n");
+	}
+
+	// Stop stream after this transfer
+	if (num_bytes_read != state->block_size)
+		state->total_bytes_left_to_transfer = num_bytes_read;
+
+	return num_bytes_read;
+}
+
+static void transfer_complete(struct libusb_transfer *transfer)
+{
+	struct cannelloni_state *const state = transfer->user_data;
+
+	if (state->abort) {
+		free_transfer(transfer);
+		return;
+	}
+
+	if ((transfer->status != LIBUSB_TRANSFER_COMPLETED && transfer->status != LIBUSB_TRANSFER_TIMED_OUT) ||
+		transfer->actual_length == 0) {
+		free_transfer(transfer);
+		abort_transfers(state);
+		return;
+	}
+
+	if (state->direction_in &&
+		state->file &&
+		fwrite(transfer->buffer, 1, transfer->actual_length, state->file) != transfer->actual_length) {
+		logerror("Error writing to stdout. Stopping\n");
+		free_transfer(transfer);
+		abort_transfers(state);
+	}
+
+	state->total_bytes_transferred += transfer->actual_length;
+
+	if (!state->direction_in)
+		transfer->length = prepare_out_buffer(state, transfer->buffer);
+
+	const int status = libusb_submit_transfer(transfer);
+	if (status != LIBUSB_SUCCESS) {
+		free_transfer(transfer);
+		abort_transfers(state);
+	}
+}
+
+static struct libusb_transfer* submit_transfer(struct cannelloni_state *state, int timeout)
+{
+	int num_bytes_to_transfer = state->block_size;
+
+	uint8_t *buf = calloc(state->block_size, 1);
+	if (!buf) {
+		logerror("Failed to allocate USB transfer buffer.\n");
+		goto allocate_transfer_buffer_failed;
+	}
+
+	struct libusb_transfer *const transfer = libusb_alloc_transfer(0);
+	if (!transfer) {
+		logerror("Failed to allocate transfer.\n");
+		goto allocate_transfer_failed;
+	}
+
+	if (!state->direction_in)
+		num_bytes_to_transfer = prepare_out_buffer(state, buf);
+
+	const unsigned char endpoint = state->direction_in ? 0x86 : 0x02; 
+	libusb_fill_bulk_transfer(transfer, state->handle, endpoint, buf, num_bytes_to_transfer, transfer_complete,
+		(void*)state, timeout);
+
+	const int status = libusb_submit_transfer(transfer);
+	if (status != 0) {
+		logerror("Failed to submit transfer: %s\n", libusb_error_name(status));
+		goto submit_transfer_failed;
+	}
+
+	state->total_bytes_left_to_transfer -= num_bytes_to_transfer;
+	state->submitted_transfers++;
+
+	return transfer;
+
+submit_transfer_failed:
+	libusb_free_transfer(transfer);
+allocate_transfer_failed:
+	free(buf);
+allocate_transfer_buffer_failed:
+	return NULL;
+}
+
+static size_t count_usb_poll_fds(const struct libusb_pollfd **fds)
+{
+	size_t num;	
+	for (num = 0; fds[num]; num++);
+	return num;
+}
+
+static sigset_t make_sigset(void)
+{
+	sigset_t sigset;
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGTERM);
+	sigaddset(&sigset, SIGINT);
+	return sigset;
+}
+
+static void handle_signalfd(struct cannelloni_state *state, int signal_poll_fd)
+{
+	struct signalfd_siginfo info;
+	if (read(signal_poll_fd, &info, sizeof(info)) != sizeof(info))
+		return;
+
+	if (++(state->num_signals) >= 5) {
+		fputs("\nReceived too many signals. Forcibly stopping...\n", stderr);
+		exit(-1);
+	} else {
+		if (verbose)
+			fputs("\nSignal received. Stopping...\n", stderr);
+		abort_transfers(state);
+	}
+}
+
+static bool do_stream(libusb_device_handle *handle, bool direction_in, size_t block_size, uint64_t num_bytes_limit,
+	bool disable_in_out, unsigned int timeout)
+{
+	int status;
+	uint64_t total_bytes_transferred;
+	bool ret = false;
+	struct timeval usb_timeout;
+
+	struct cannelloni_state state = {
+		.handle = handle,
+		.abort = false,
+		.num_signals = 0,
+		.direction_in = direction_in,
+		.file = disable_in_out ? NULL : (direction_in ? stdout : stdin),
+		.block_size = block_size,
+		.total_bytes_left_to_transfer = num_bytes_limit,
+		.total_bytes_transferred = 0,
+		.transfers = NULL,
+		.submitted_transfers = 0,
+		.empty_transfer_count = 0
+	};
+
+	// Claim interface 0 again
+	status = libusb_claim_interface(handle, 0);
+	if (status != LIBUSB_SUCCESS) {
+		logerror("libusb_claim_interface failed for data transfer: %s\n", libusb_error_name(status));
+		goto claim_interface_failed;
+	}
+
+	// Set interface 0 alternate function corresponding to transfer type
+	// TODO: Currently only transfer type 1 supported (bulk)
+	static const int alternate_function = 1;
+	status = libusb_set_interface_alt_setting(handle, 0, alternate_function);
+	if (status != LIBUSB_SUCCESS) {
+		logerror("libusb_set_interface_alt_setting failed for data transfer: %s\n", libusb_error_name(status));
+		goto set_interface_alt_setting_failed;
+	}
+
+	// Get polling fds
+	const struct libusb_pollfd **const usb_poll_fds = libusb_get_pollfds(NULL);
+	if (!usb_poll_fds) {
+		logerror("Failed to get pollfd\n");
+		goto failed_to_get_usb_poll_fds;
+	}
+
+	// Block normal signal handling
+	const sigset_t sigset = make_sigset();
+	if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
+		logerror("Failed to mask signals\n");
+		goto failed_to_mask_signals;
+	}
+
+	// Create a signal fd
+	const int signal_poll_fd = signalfd(-1, &sigset, 0);
+	if (signal_poll_fd == -1) {
+		logerror("Failed to open signalfd\n");
+		goto failed_to_open_signalfd;
+	}
+
+	// Allocate pollfds
+	const size_t num_usb_fds = count_usb_poll_fds(usb_poll_fds);
+	const size_t num_fds = num_usb_fds + 1;
+	struct pollfd *const pollfds = calloc(sizeof(struct pollfd), num_fds);
+	if (!pollfds) {
+		logerror("Failed to allocate pollfds\n");
+		goto failed_to_allocate_pollfds;
+	}
+
+	// Construct polling fd list
+	for (size_t i = 0; i != num_usb_fds; i++) {
+		const struct libusb_pollfd *const usb_poll_fd = usb_poll_fds[i];
+		struct pollfd *const fd = pollfds + i;
+
+		fd->fd = usb_poll_fd->fd;
+		fd->events = usb_poll_fd->events;
+	}
+
+	const size_t signalfd_poll_idx = num_usb_fds;
+	pollfds[signalfd_poll_idx] = (struct pollfd){
+		.fd = signal_poll_fd,
+		.events = POLLIN | POLLERR | POLLHUP
+	};
+
+	// Allocate transfers
+	if (!(state.transfers = calloc(sizeof(struct libusb_transfer*), NUM_TRANSFERS))) {
+		logerror("Failed to allocate transfers.\n");
+		goto allocate_transfers_array_failed;
+	}
+
+	for (unsigned int i = 0; i != NUM_TRANSFERS && state.total_bytes_left_to_transfer != 0; i++) {
+		if (!(state.transfers[i] = submit_transfer(&state, timeout))) {
+			abort_transfers(&state);
+			break;
+		}
+	}
+
+	// Poll transfers
+	const uint64_t time0 = get_time();
+
+	while (state.submitted_transfers != 0) {
+		if ((status = libusb_get_next_timeout(NULL, &usb_timeout)) < 0) {
+			logerror("Failed to check USB timeout: %d\n", status);
+			break;
+		}
+
+		const int poll_timeout = (status == 0) ? MAX_POLL_TIMEOUT :
+			(usb_timeout.tv_sec * 1000 + usb_timeout.tv_usec / 1000);
+		if ((status = poll(pollfds, num_fds, poll_timeout)) == -1)
+			break;
+
+		libusb_handle_events_timeout(NULL, &(struct timeval){0, 0});
+
+		if (pollfds[signalfd_poll_idx].revents & POLLIN)
+			handle_signalfd(&state, signal_poll_fd);
+	}
+
+	const uint64_t time1 = get_time();
+
+	// Print result statistics
+	if (verbose && !state.abort) {
+		// Seconds
+		const float delta_time = (time1 - time0) * 1e-9f;
+
+		// MiB/s
+		const float speed = total_bytes_transferred / (delta_time * 1024.f * 1024.f);
+
+		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n",
+			total_bytes_transferred, delta_time, speed);
+
+	}
+
+	ret = true;
+
+	free(state.transfers);
+allocate_transfers_array_failed:
+	free(pollfds);
+failed_to_allocate_pollfds:
+	close(signal_poll_fd);
+failed_to_open_signalfd:
+failed_to_mask_signals:
+	libusb_free_pollfds(usb_poll_fds);
+failed_to_get_usb_poll_fds:
+set_interface_alt_setting_failed:
+	libusb_release_interface(handle, 0);
+claim_interface_failed:
+
+	return ret;
+}
+
 #define FIRMWARE 0
 #define LOADER 1
 int main(int argc, char*argv[])
@@ -271,7 +584,6 @@ int main(int argc, char*argv[])
 	libusb_device_handle *device = NULL;
 	struct libusb_device_descriptor desc;
 
-	int alternate_function;
 	bool direction_in = true;
 	bool disable_in_out = false;
 	bool use_8bit_bus = false;
@@ -280,12 +592,7 @@ int main(int argc, char*argv[])
 
 	int block_size = 16384;
 	unsigned int bSize = 0;
-	unsigned char *transfer_buffer;
 	uint64_t num_bytes_limit = UNLIMITED;
-	uint64_t num_bytes_to_transfer = 0;
-	uint64_t total_bytes_left_to_transfer = 0;
-	uint64_t total_bytes_transferred = 0;
-	int num_bytes_transferred;
 
 	bool use_external_ifclk = false;
 	bool use_48mhz_internal_clk = true;
@@ -302,12 +609,6 @@ int main(int argc, char*argv[])
 	bool invert_queue_slrd_pin = false;
 	bool invert_queue_sloe_pin = false;
 	bool invert_queue_pktend_pin = false;
-
-	unsigned char endpoint;
-
-	// Install signal handlers
-	signal(SIGTERM, signal_handler);
-	signal(SIGINT, signal_handler);
 
 	// Parse arguments
 
@@ -546,8 +847,6 @@ int main(int argc, char*argv[])
 	if (invert_queue_pktend_pin) firmware_config[ 5 ] |= 1 << 5;
 
 
-	if (do_terminate) exit(-1);
-
 	// -- Finished configuration preparation. Start accessing the device with libusb
 
 	// Init libusb
@@ -706,107 +1005,15 @@ int main(int argc, char*argv[])
 		}
 	}
 
-	// Claim interface 0 again
-	status = libusb_claim_interface(device, 0);
-	if (status != LIBUSB_SUCCESS) {
-		libusb_close(device);
-		logerror("libusb_claim_interface failed for data transfer: %s\n", libusb_error_name(status));
-		goto err;
-	}
-
-	// Set interface 0 alternate function corresponding to transfer type
-	// TODO: Currently only transfer type 1 supported (bulk)
-	alternate_function = 1;
-	status = libusb_set_interface_alt_setting(device, 0, alternate_function);
-	if (status != LIBUSB_SUCCESS) {
-		libusb_release_interface(device, 0);
-		libusb_close(device);
-		logerror("libusb_set_interface_alt_setting failed for data transfer: %s\n", libusb_error_name(status));
-		goto err;
-	}
-
-	// Allocate transfer buffer
-	transfer_buffer = calloc(block_size, 1);
-	if (!transfer_buffer) {
-		logerror("Not enough system memory to allocate transfer block buffer (%d bytes). Closing.", block_size);
-		do_terminate = true;
-	}
-
-	// Select endpoint
-	endpoint = direction_in ? 0x86 : 0x02;
-
-	total_bytes_left_to_transfer = num_bytes_limit;
-
-	const uint64_t time0 = get_time();
-
-	// Data transfer loop
-	while (!do_terminate && total_bytes_left_to_transfer > 0) {
-		num_bytes_to_transfer = (total_bytes_left_to_transfer != UNLIMITED &&
-			num_bytes_to_transfer >= total_bytes_left_to_transfer) ?
-			total_bytes_left_to_transfer : block_size;
-
-		if (!direction_in) {
-			if (!disable_in_out) {
-				// Read from stdin
-				if (fread(transfer_buffer, num_bytes_to_transfer, 1, stdin) != 1 ) {
-					if (!feof(stdin)) logerror("Error reading data from stdin. Stopping.\n");
-					else if (verbose) logerror("stdin has reached EOF. Stopping.\n");
-					break;
-				}
-				if (do_terminate) break;
-			} else memset(transfer_buffer, 0, num_bytes_to_transfer);
-		}
-
-		// Do the actual data transfer
-		status = libusb_bulk_transfer(device, endpoint, transfer_buffer, num_bytes_to_transfer, &num_bytes_transferred, 1000);
-		if (status) {
-			logerror("Data transfer failed: %s\n", libusb_error_name(status));
-			break;
-		}
-
-		if (total_bytes_left_to_transfer != UNLIMITED) 
-			total_bytes_left_to_transfer -= num_bytes_transferred;
-		total_bytes_transferred += num_bytes_transferred;
-
-		if (direction_in && !disable_in_out)
-			// Write to stdout
-			if (fwrite(transfer_buffer, num_bytes_transferred, 1, stdout) != 1 ) {
-				logerror("Error writing to stdout. Stopping.");
-				break;
-			}
-
-		if (num_bytes_transferred < num_bytes_to_transfer) {
-			logerror("Input data received for transfer was less than expected.");
-		}
-
-	}
-
-	const uint64_t time1 = get_time();
-
-	// Free transfer buffer
-	free(transfer_buffer);
-
-	// Release interface
-	libusb_release_interface(device, 0);
+	// Do the transfer
+	status = do_stream(device, direction_in, block_size, num_bytes_limit, disable_in_out, 1000) ?
+		EXIT_SUCCESS : EXIT_FAILURE;
 
 	// Close device
 	libusb_close(device);
 
 	// Exit libusb
 	libusb_exit(NULL);
-
-	// Print result statistics
-
-	if (verbose) {
-		// Seconds
-		const float delta_time = (time1 - time0) * 1e-9f;
-
-		// MiB/s
-		const float speed = total_bytes_transferred / (delta_time * 1024.f * 1024.f);
-
-		fprintf(stderr, "Transferred %"PRIu64" bytes in %.2f seconds (%.2f MiB/s)\n", total_bytes_transferred, delta_time, speed);
-
-	}
 
 	return status;
 
