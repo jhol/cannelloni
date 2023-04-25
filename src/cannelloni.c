@@ -256,6 +256,37 @@ static void pre_reset_callback(libusb_device_handle *device)
 	}
 }
 
+static int get_image_type(const char *path)
+{
+	const char *const ext = path + strlen(path) - 4;
+	if ((_stricmp(ext, ".hex") == 0) || (strcmp(ext, ".ihx") == 0))
+		return IMG_TYPE_HEX;
+	else if (_stricmp(ext, ".iic") == 0)
+		return IMG_TYPE_IIC;
+	else if (_stricmp(ext, ".bix") == 0)
+		return IMG_TYPE_BIX;
+	else if (_stricmp(ext, ".img") == 0)
+		return IMG_TYPE_IMG;
+	else
+		return IMG_TYPE_UNDEFINED;
+}
+
+static int load_image(libusb_device_handle *device, const char *path, int fx_type, int stage,
+	void (*pre_reset_callback)(libusb_device_handle *))
+{
+	static const char *const img_names[] = IMG_TYPE_NAMES;
+
+	const int img_type = get_image_type(path);
+	if (img_type == IMG_TYPE_UNDEFINED) {
+		logerror("%s is not a recognized image type.\n", path);
+		return -1;
+	}
+
+	logerror("%s: type %s\n", path, img_names[img_type]);
+
+	return ezusb_load_ram(device, path, fx_type, img_type, stage, pre_reset_callback);
+}
+
 static void free_transfer(struct libusb_transfer *transfer)
 {
 	struct cannelloni_state *const state = transfer->user_data;
@@ -573,7 +604,6 @@ int main(int argc, char*argv[])
 	const char *device_path = getenv("DEVICE");
 	const char *type = NULL;
 	const char *fx_name[FX_TYPE_MAX] = FX_TYPE_NAMES;
-	const char *ext, *img_name[] = IMG_TYPE_NAMES;
 	int fx_type = FX_TYPE_UNDEFINED, img_type[ARRAYSIZE(path)];
 
 	int opt, status;
@@ -940,45 +970,22 @@ int main(int argc, char*argv[])
 	if (verbose)
 		logerror("microcontroller type: %s\n", fx_name[fx_type]);
 
-	// Load the firmware image in memory
-	for (i=0; i<ARRAYSIZE(path); i++) {
-		if (path[i]) {
-			ext = path[i] + strlen(path[i]) - 4;
-			if ((_stricmp(ext, ".hex") == 0) || (strcmp(ext, ".ihx") == 0))
-				img_type[i] = IMG_TYPE_HEX;
-			else if (_stricmp(ext, ".iic") == 0)
-				img_type[i] = IMG_TYPE_IIC;
-			else if (_stricmp(ext, ".bix") == 0)
-				img_type[i] = IMG_TYPE_BIX;
-			else if (_stricmp(ext, ".img") == 0)
-				img_type[i] = IMG_TYPE_IMG;
-			else {
-				logerror("%s is not a recognized image type.\n", path[i]);
-				libusb_release_interface(device, 0);
-				libusb_close(device);
-				goto err;
-			}
-		}
-		if (verbose && path[i] != NULL)
-			logerror("%s: type %s\n", path[i], img_name[img_type[i]]);
-	}
-
 	// Program the firmware in the microcontroller
 	if (!path[LOADER]) {
 		// Single stage, put into internal memory
 		if (verbose > 1)
 			logerror("single stage: load on-chip memory\n");
-		status = ezusb_load_ram(device, path[FIRMWARE], fx_type, img_type[FIRMWARE], 0, pre_reset_callback);
+		status = load_image(device, path[FIRMWARE], fx_type, 0, pre_reset_callback);
 	} else {
 		// two-stage, put loader into external memory
 		if (verbose > 1)
 			logerror("1st stage: load 2nd stage loader\n");
-		status = ezusb_load_ram(device, path[LOADER], fx_type, img_type[LOADER], 0, pre_reset_callback);
+		status = load_image(device, path[LOADER], fx_type, 0, pre_reset_callback);
 		if (status == 0) {
 			// two-stage, put firmware into internal memory
 			if (verbose > 1)
 				logerror("2nd state: load on-chip memory\n");
-			status = ezusb_load_ram(device, path[FIRMWARE], fx_type, img_type[FIRMWARE], 1, NULL);
+			status = load_image(device, path[FIRMWARE], fx_type, 1, NULL);
 		}
 	}
 
