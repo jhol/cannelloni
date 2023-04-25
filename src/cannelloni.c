@@ -618,8 +618,7 @@ int main(int argc, char*argv[])
 	int num_buffers = 4;
 	bool run_async_bus = false;
 
-	int block_size = 16384;
-	unsigned int bSize = 0;
+	unsigned int block_size = 16384;
 	uint64_t num_bytes_limit = UNLIMITED;
 
 	bool use_external_ifclk = false;
@@ -712,11 +711,10 @@ int main(int argc, char*argv[])
 			break;
 
 		case 'b':
-			if (sscanf(optarg, "%u" , &bSize) != 1 || bSize < 2 || bSize & 1) {
+			if (sscanf(optarg, "%u" , &block_size) != 1 || block_size < 2 || block_size & 1) {
 				fputs("-b: Please specify a positive, even buffer size in bytes in decimal format.", stderr);
 				return -1;
 			}
-			block_size = bSize;
 			break;
 
 		case 'n':
