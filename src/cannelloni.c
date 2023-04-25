@@ -160,6 +160,7 @@ static int print_usage(int error_code) {
 		"  -r              -- Invert polarity of 'SLRD' input pin (i.e., assert high)\n"
 		"  -j              -- Invert polarity of 'SLOE' input pin (i.e., assert high)\n"
 		"  -k              -- Invert polarity of 'PKTEND' input flag pin (i.e., assert high)\n"
+		"  -T <timeout>    -- Timeout in milliseconds.\n"
 		"  -v              -- Increase verbosity.\n"
 		"  -q              -- Decrease verbosity (silent mode)\n"
 		"  -V              -- Print program version.\n"
@@ -637,9 +638,11 @@ int main(int argc, char*argv[])
 	bool invert_queue_sloe_pin = false;
 	bool invert_queue_pktend_pin = false;
 
+	unsigned int timeout = 0;
+
 	// Parse arguments
 
-	while ((opt = getopt(argc, argv, "qvV?hiow80432aseljkrxz:b:d:p:f:g:t:n:c:")) != EOF)
+	while ((opt = getopt(argc, argv, "qvV?hiow80432aseljkrxz:b:d:p:f:g:t:n:c:T:")) != EOF)
 
 		switch (opt) {
 		case 'd':
@@ -758,6 +761,13 @@ int main(int argc, char*argv[])
 
 		case 'k':
 			invert_queue_pktend_pin = true;
+			break;
+
+		case 'T':
+			if (sscanf(optarg, "%u" , &timeout) != 1) {
+				fputs("-T: Please specify a timeout in milliseconds in decimal format.", stderr);
+				return -1;
+			}
 			break;
 
 		case 'V':
@@ -1009,7 +1019,7 @@ int main(int argc, char*argv[])
 	}
 
 	// Do the transfer
-	status = do_stream(device, direction_in, block_size, num_bytes_limit, disable_in_out, 1000) ?
+	status = do_stream(device, direction_in, block_size, num_bytes_limit, disable_in_out, timeout) ?
 		EXIT_SUCCESS : EXIT_FAILURE;
 
 	// Close device
