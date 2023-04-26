@@ -207,21 +207,18 @@ static bool parse_option_c(const char *value, bool *use_external_ifclk, bool *us
 	return value[pos] != 0;
 }
 
-#define MHZ12 0
-#define MHZ24 1
-#define MHZ48 2
-static char parse_option_z(const char *value, int *cpu_mhz, bool *enable_clkout_output, bool *invert_clkout)
+static char parse_option_z(const char *value, unsigned int *cpu_mhz, bool *enable_clkout_output, bool *invert_clkout)
 {
 	int pos = 0;
 
 	if (value[pos] == '1' && value[pos + 1] == '2') {
-		*cpu_mhz = MHZ12;
+		*cpu_mhz = 12;
 		pos += 2;
 	} else if (value[pos] == '2' && value[pos + 1] == '4') {
-		*cpu_mhz = MHZ24;
+		*cpu_mhz = 24;
 		pos += 2;
 	} else if (value[pos] == '4' && value[pos + 1] == '8') {
-		*cpu_mhz = MHZ48;
+		*cpu_mhz = 48;
 		pos += 2;
 	}
 
@@ -627,7 +624,7 @@ int main(int argc, char*argv[])
 	bool enable_ifclk_output = false;
 	bool invert_ifclk = false;
 
-	int cpu_mhz = MHZ48;
+	unsigned int cpu_mhz = 48;
 	bool enable_clkout_output = false;
 	bool invert_clkout = false;
 
@@ -860,13 +857,13 @@ int main(int argc, char*argv[])
 
 	// Byte 4
 	switch (cpu_mhz) {
-	case MHZ12:
+	case 12:
 		// Nothing to do: firmware_config[ 4 ] |= 0x00;
 		break;
-	case MHZ24:
+	case 24:
 		firmware_config[ 4 ] |= 0x08;
 		break;
-	case MHZ48:
+	case 48:
 	default:
 		firmware_config[ 4 ] |= 0x10;
 		break;
